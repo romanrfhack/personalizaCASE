@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>CaseCustomizer • Demo HTML</title>
+  <title>CaseCustomizer</title>
   <style>
     :root{
       --primary: hsl(260, 100%, 65%);
@@ -27,19 +27,14 @@
     }
     a{color:var(--accent)}
     .container{max-width:1200px; margin:0 auto; padding:24px}
-    header.nav{
-      position:sticky; top:0; backdrop-filter: blur(10px);
+    header.nav{ position:sticky; top:0; backdrop-filter: blur(10px);
       background: linear-gradient(90deg, color-mix(in srgb, var(--primary) 22%, transparent), color-mix(in srgb, var(--accent) 22%, rgba(8,10,24,.6)));
-      border-bottom:1px solid rgba(255,255,255,.06);
-      z-index:50;
-    }
+      border-bottom:1px solid rgba(255,255,255,.06); z-index:50; }
     .nav-inner{display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 24px}
     .brand{display:flex; align-items:center; gap:12px; font-weight:800; letter-spacing:.2px}
-    .brand .logo{width:34px; height:34px; border-radius:12px; background:
-      conic-gradient(from 140deg, var(--primary), var(--accent)); box-shadow:0 0 0 2px rgba(255,255,255,.1) inset}
+    .brand .logo{width:34px; height:34px; border-radius:12px; background: conic-gradient(from 140deg, var(--primary), var(--accent)); box-shadow:0 0 0 2px rgba(255,255,255,.1) inset}
     .pill{padding:10px 14px; border-radius:999px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.08)}
-    .btn{cursor:pointer; border:none; padding:12px 16px; border-radius:12px; font-weight:700; letter-spacing:.2px; color:#0b1020;
-      background: linear-gradient(135deg, var(--accent), var(--primary)); box-shadow: var(--shadow)}
+    .btn{cursor:pointer; border:none; padding:12px 16px; border-radius:12px; font-weight:700; letter-spacing:.2px; color:#0b1020; background: linear-gradient(135deg, var(--accent), var(--primary)); box-shadow: var(--shadow)}
     .btn.ghost{background:transparent; color:#f1f5ff; border:1px solid rgba(255,255,255,.15)}
     .btn:active{transform:translateY(1px)}
 
@@ -60,6 +55,7 @@
     .stage-wrap{display:flex; align-items:center; justify-content:center; height:700px; background: radial-gradient(600px 300px at 50% -30%, rgba(130,150,255,.08), transparent), linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02)); border:1px dashed rgba(255,255,255,.08); border-radius:20px; position:relative}
     .stage{position:relative; width:360px; height:720px; border-radius:28px; background:#111; box-shadow: 0 16px 40px rgba(0,0,0,.4), inset 0 0 0 2px rgba(255,255,255,.06)}
     .case-overlay{pointer-events:none; position:absolute; inset:0; border-radius:28px;}
+    .guides-overlay{pointer-events:none; position:absolute; inset:0; border-radius:28px; mix-blend-mode:screen; opacity:.9}
     .camera{position:absolute; width:92px; height:92px; right:22px; top:20px; background:radial-gradient(circle at 35% 35%, #1b1d2c 0 42%, transparent 42%),
         radial-gradient(circle at 70% 70%, #1b1d2c 0 40%, transparent 40%),
         radial-gradient(circle at 30% 75%, #1b1d2c 0 38%, transparent 38%),
@@ -73,13 +69,13 @@
     .text-layer{padding:6px 10px; font-weight:800; letter-spacing:.4px; text-shadow: 0 2px 8px rgba(0,0,0,.35)}
 
     /* Selection box */
-    .selection{position:absolute; border:1.5px dashed var(--accent); outline: 2px solid rgba(0,0,0,.25); box-shadow: 0 0 0 4px rgba(0,0,0,.18) inset; pointer-events:none}
-    .handle{position:absolute; width:14px; height:14px; border-radius:3px; background:var(--accent); outline:2px solid rgba(0,0,0,.5)}
-    .handle.tl{left:-7px; top:-7px}
-    .handle.tr{right:-7px; top:-7px}
-    .handle.bl{left:-7px; bottom:-7px}
-    .handle.br{right:-7px; bottom:-7px}
-    .handle.rot{left:50%; top:-36px; transform:translateX(-50%); width:12px; height:12px; border-radius:999px; background:var(--primary)}
+    .selection{position:absolute; border:1.5px dashed var(--accent); outline: 2px solid rgba(0,0,0,.25); box-shadow: 0 0 0 4px rgba(0,0,0,.18) inset; pointer-events:auto}
+    .handle{ position:absolute; width:14px; height:14px; border-radius:3px; background:var(--accent); outline:2px solid rgba(0,0,0,.5); cursor:nwse-resize }
+    .handle.tl{ left:-7px; top:-7px; cursor:nwse-resize }
+    .handle.tr{ right:-7px; top:-7px; cursor:nesw-resize }
+    .handle.bl{ left:-7px; bottom:-7px; cursor:nesw-resize }
+    .handle.br{ right:-7px; bottom:-7px; cursor:nwse-resize }
+    .handle.rot{ left:50%; top:-36px; transform:translateX(-50%); width:12px; height:12px; border-radius:999px; background:var(--primary); cursor:grab }
 
     .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
     .input, select{width:100%; padding:10px 12px; border-radius:10px; background:#0e1220; color:#e8ecff; border:1px solid rgba(255,255,255,.12)}
@@ -174,6 +170,7 @@
           <div class="mic"></div>
           <div class="camera" id="cameraOverlay"></div>
           <div id="overlayMask" class="case-overlay"></div>
+          <div id="guidesOverlay" class="guides-overlay"></div>
         </div>
         <!-- selection box injected here -->
       </div>
@@ -225,7 +222,26 @@
               <input id="textColor" class="input" type="color" value="#ffffff" />
             </label>
           </div>
+
+          <label class="row" style="margin-top:6px">
+            <input id="toggleSnap" type="checkbox" style="scale:1.1; margin-right:8px" checked>
+            <span class="hint">Ajustar (snap) a guías y centro</span>
+          </label>
         </div>
+
+        <h3>Alineación</h3>
+        <div class="grid cols-3" id="alignControls">
+          <button class="btn ghost" id="alLeft"   title="Alinear a la izquierda">Izq</button>
+          <button class="btn ghost" id="alCenterX" title="Centrar horizontal">Cen X</button>
+          <button class="btn ghost" id="alRight"  title="Alinear a la derecha">Der</button>
+          <button class="btn ghost" id="alTop"    title="Alinear arriba">Arr</button>
+          <button class="btn ghost" id="alCenterY" title="Centrar vertical">Cen Y</button>
+          <button class="btn ghost" id="alBottom" title="Alinear abajo">Aba</button>
+        </div>
+        <label class="row" style="margin-top:6px">
+          <input id="toggleConfine" type="checkbox" style="scale:1.1; margin-right:8px" checked>
+          <span class="hint">Forzar dentro de área segura</span>
+        </label>
 
         <hr style="margin:14px 0; border-color: rgba(255,255,255,.08)"/>
         <h3>Proyecto</h3>
@@ -237,6 +253,9 @@
         </div>
         <div class="footerbar">
           <div class="status" id="status">Listo.</div>
+        </div>
+        <div class="row" style="margin-top:8px; gap:8px">
+          <span class="hint">Consejo: Shift = mantener proporción • ▲/▼ = ordenar capas • 🔒 = bloquear edición</span>
         </div>
       </aside>
     </section>
@@ -264,12 +283,16 @@
   const $ = (sel, ctx=document)=>ctx.querySelector(sel);
   const $$ = (sel, ctx=document)=>Array.from(ctx.querySelectorAll(sel));
   const toast = (msg)=>{ const s=$('#status'); s.textContent=msg; setTimeout(()=>{ s.textContent=''; }, 3000)}
+  const clamp=(v,min,max)=>Math.max(min, Math.min(max, v));
+  const snap=(val, step)=>Math.round(val/step)*step;
+  const BLEED_PX = 24; // margen extra para corte
+  const SAFE_PX  = 18; // margen seguro para contenido
 
-  // --- Phone Models (simple presets with stage size & camera size/pos) ---
+  // --- Phone Models (with camera type for punch-out) ---
   const PHONE_MODELS = [
-    { id:'iph15pro', name:'iPhone 15 Pro', w:360, h:720, cam:{x:360-22-92, y:20, w:92, h:92, r:22}},
-    { id:'gs25u', name:'Galaxy S25 Ultra', w:360, h:720, cam:{x:360-20-30, y:30, w:30, h:160, r:14}},
-    { id:'pix9pro', name:'Pixel 9 Pro', w:360, h:720, cam:{x:20, y:20, w:74, h:74, r:16}},
+    { id:'iph15pro', name:'iPhone 15 Pro', w:360, h:720, cam:{x:360-22-92, y:20, w:92, h:92, r:22, type:'rounded'}},
+    { id:'gs25u', name:'Galaxy S25 Ultra', w:360, h:720, cam:{x:360-20-30, y:30, w:30, h:160, r:14, type:'pill'}},
+    { id:'pix9pro', name:'Pixel 9 Pro', w:360, h:720, cam:{x:20, y:20, w:74, h:74, r:37, type:'circle'}},
   ];
 
   // --- App State ---
@@ -277,9 +300,10 @@
     user: null,
     model: PHONE_MODELS[0],
     bgImage: null, // phone photo or model texture
-    layers: [], // {id,type:'image'|'text', name, x,y,w,h, rot, dataUrl? , text/font/size/color}
+    layers: [], // {id,type:'image'|'text', name, x,y,w,h, rot, dataUrl? , text/font/size/color, locked?}
     selectedId: null,
-    stage:{w:360, h:720}
+    stage:{w:360, h:720},    snapping:true,
+    confineSafe:true
   };
 
   // --- Init UI ---
@@ -296,13 +320,44 @@
 
   function setStageSize(w,h){
     state.stage.w=w; state.stage.h=h; const s=$('#stage'); s.style.width=w+'px'; s.style.height=h+'px'; $('#stageSizeInfo').textContent=`${w}×${h}`;
-    // reposition/scale layers proportionally? (simple keep values)
   }
 
   function updateCamera(){
-    const c=state.model.cam; const el=$('#cameraOverlay');
-    if(!c){ el.style.display='none'; return }
-    el.style.display='block'; el.style.left=c.x+'px'; el.style.top=c.y+'px'; el.style.width=c.w+'px'; el.style.height=c.h+'px'; el.style.borderRadius=c.r+'px';
+    const c=state.model.cam; const el=$('#cameraOverlay'); const mask=$('#overlayMask');
+    if(!c){ el.style.display='none'; mask.style.display='none'; return }
+    // visible camera decoration
+    el.style.display='block'; el.style.left=c.x+'px'; el.style.top=c.y+'px'; el.style.width=c.w+'px'; el.style.height=c.h+'px'; el.style.borderRadius=(c.type==='pill'||c.type==='rounded'||c.type==='circle'? (c.r+'px') : '0');
+
+    // build SVG mask with a transparent cut-out where the camera lives
+    mask.style.display='block';
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${state.stage.w}' height='${state.stage.h}' viewBox='0 0 ${state.stage.w} ${state.stage.h}'>
+      <defs>
+        <mask id='cut'>
+          <rect x='0' y='0' width='${state.stage.w}' height='${state.stage.h}' fill='white' />
+          ${c.type==='circle' ?
+            `<circle cx='${c.x + c.w/2}' cy='${c.y + c.h/2}' r='${Math.min(c.w,c.h)/2}' fill='black' />` :
+            `<rect x='${c.x}' y='${c.y}' width='${c.w}' height='${c.h}' rx='${c.r||0}' ry='${c.r||0}' fill='black' />`
+          }
+        </mask>
+      </defs>
+      <rect x='0' y='0' width='${state.stage.w}' height='${state.stage.h}' fill='rgba(255,255,255,0.06)' mask='url(#cut)' />
+    </svg>`;
+    mask.innerHTML = svg;
+    drawGuides();
+  }
+
+  function drawGuides(){
+    const g=$('#guidesOverlay'); if(!g) return; const w=state.stage.w, h=state.stage.h; const bleed=BLEED_PX, safe=SAFE_PX;
+    const inner = { x: safe, y: safe, w: w - safe*2, h: h - safe*2 };
+    const outer = { x: bleed, y: bleed, w: w - bleed*2, h: h - bleed*2 };
+    const cx=w/2, cy=h/2;
+    g.innerHTML = `
+      <svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}' viewBox='0 0 ${w} ${h}'>
+        <rect x='${outer.x}' y='${outer.y}' width='${outer.w}' height='${outer.h}' fill='none' stroke='rgba(6,182,212,0.65)' stroke-dasharray='8 6' stroke-width='2'/>
+        <rect x='${inner.x}' y='${inner.y}' width='${inner.w}' height='${inner.h}' fill='none' stroke='rgba(124,58,237,0.8)' stroke-dasharray='4 6' stroke-width='2'/>
+        <line x1='${cx}' y1='0' x2='${cx}' y2='${h}' stroke='rgba(255,255,255,0.15)' stroke-width='1'/>
+        <line x1='0' y1='${cy}' x2='${w}' y2='${cy}' stroke='rgba(255,255,255,0.15)' stroke-width='1'/>
+      </svg>`;
   }
 
   function scrollToEditor(){
@@ -341,6 +396,7 @@
   function drawLayerDom(layer){
     let el = document.getElementById(layer.id);
     if(!el){ el=document.createElement('div'); el.className='layer'; el.id=layer.id; $('#stage').appendChild(el); el.addEventListener('pointerdown', onLayerPointerDown) }
+    el.style.pointerEvents = layer.locked? 'none':'auto';
     // content
     el.innerHTML='';
     if(layer.type==='image'){
@@ -349,6 +405,7 @@
       const t = document.createElement('div'); t.className='text-layer'; t.textContent=layer.text; t.style.fontFamily=layer.font; t.style.fontSize=layer.size+'px'; t.style.color=layer.color; el.appendChild(t);
     }
     positionLayerDom(layer);
+    el.style.zIndex = String(100 + state.layers.indexOf(layer));
   }
 
   function positionLayerDom(layer){
@@ -361,25 +418,28 @@
     }
   }
 
-  function displayTextAutosize(el, layer){
-    // keep text centered visually
-    el.style.display='flex'; el.style.alignItems='center'; el.style.justifyContent='center';
-  }
+  function displayTextAutosize(el, layer){ el.style.display='flex'; el.style.alignItems='center'; el.style.justifyContent='center'; }
 
   function refreshLayersList(){
     const list=$('#layersList'); list.innerHTML='';
     state.layers.slice().reverse().forEach(layer=>{
-      const row = document.createElement('button');
-      row.className='phone-btn'; row.style.textAlign='left'; row.innerHTML=`<strong>${layer.name}</strong> <span class="hint">(${layer.type})</span>`;
+      const row = document.createElement('div');
+      row.className='phone-btn'; row.style.textAlign='left'; row.style.display='grid'; row.style.gridTemplateColumns='1fr auto'; row.style.alignItems='center';
+      const title = document.createElement('button');
+      title.className='btn ghost'; title.style.padding='8px 10px'; title.style.background='transparent'; title.textContent=layer.name + ` (${layer.type})`;
       if(state.selectedId===layer.id) row.classList.add('active');
-      row.onclick=()=>selectLayer(layer.id);
+      title.onclick=()=>selectLayer(layer.id);
+      const actions = document.createElement('div'); actions.className='row';
+      const up=document.createElement('button'); up.className='btn ghost'; up.textContent='▲'; up.style.padding='6px 8px'; up.onclick=(e)=>{e.stopPropagation(); moveLayer(layer.id, +1)};
+      const down=document.createElement('button'); down.className='btn ghost'; down.textContent='▼'; down.style.padding='6px 8px'; down.onclick=(e)=>{e.stopPropagation(); moveLayer(layer.id, -1)};
+      const lock=document.createElement('button'); lock.className='btn ghost'; lock.textContent = layer.locked? '🔒':'🔓'; lock.style.padding='6px 8px'; lock.onclick=(e)=>{e.stopPropagation(); layer.locked=!layer.locked; drawLayerDom(layer); refreshLayersList(); saveAuto(); };
+      actions.append(up,down,lock);
+      row.append(title, actions);
       list.appendChild(row);
     })
   }
 
-  function selectLayer(id){
-    state.selectedId=id; refreshLayersList(); updatePropsPanel(); drawSelection();
-  }
+  function selectLayer(id){ state.selectedId=id; refreshLayersList(); updatePropsPanel(); drawSelection(); selectionEl.style.zIndex = '9999'; }
 
   function updatePropsPanel(){
     const l=layerById(state.selectedId);
@@ -416,8 +476,8 @@
   }
 
   function onLayerPointerDown(e){
-    const id=e.currentTarget.id; selectLayer(id);
-    const l=layerById(id); if(!l) return; dragMode='move';
+    const id=e.currentTarget.id; const l=layerById(id); if(!l) return; if(l.locked) return; selectLayer(id);
+    dragMode='move';
     start={x:e.clientX, y:e.clientY, l: {...l}, mx:l.x, my:l.y};
     window.addEventListener('pointermove', onPointerMove); window.addEventListener('pointerup', onPointerUp);
   }
@@ -436,14 +496,14 @@
 
   function onPointerMove(e){
     const l=layerById(state.selectedId); if(!l || !dragMode) return;
+    const rect=$('#stage').getBoundingClientRect();
     const dx=e.clientX-start.x, dy=e.clientY-start.y; const keepRatio = e.shiftKey;
     if(dragMode==='move'){
       l.x = start.l.x + dx; l.y = start.l.y + dy;
     } else if(dragMode==='rot'){
-      const cx=l.x + l.w/2, cy=l.y + l.h/2; const a=Math.atan2((e.clientY - $('#stage').getBoundingClientRect().top) - cy, (e.clientX - $('#stage').getBoundingClientRect().left) - cx);
+      const cx=l.x + l.w/2, cy=l.y + l.h/2; const a=Math.atan2((e.clientY - rect.top) - cy, (e.clientX - rect.left) - cx);
       l.rot = Math.round(a * 180/Math.PI);
     } else {
-      // resize around corners (no rotation-aware for simplicity)
       const orig = {...start.l};
       if(dragMode==='tl'){ l.x=orig.x+dx; l.y=orig.y+dy; l.w=orig.w-dx; l.h=orig.h-dy; }
       if(dragMode==='tr'){ l.y=orig.y+dy; l.w=orig.w+dx; l.h=orig.h-dy; }
@@ -452,37 +512,94 @@
       if(keepRatio){ const r = orig.w/orig.h; l.h = Math.sign(l.h)*Math.abs(l.w / r); }
       l.w=Math.max(12,l.w); l.h=Math.max(12,l.h);
     }
+    if(state.snapping) applySnapping(l);
     positionLayerDom(l); drawSelection();
   }
   function onPointerUp(){ dragMode=null; saveAuto(); window.removeEventListener('pointermove', onPointerMove); window.removeEventListener('pointerup', onPointerUp) }
 
-  // Actions
-  $('#btnNew').onclick=()=>{ if(confirm('¿Vaciar el lienzo?')){ state.layers=[]; state.bgImage=null; renderBackground(); refreshAll(); saveAuto(); }}
-  $('#btnDeleteLayer').onclick=()=>{ if(!state.selectedId) return; const idx=state.layers.findIndex(l=>l.id===state.selectedId); if(idx>=0){ state.layers.splice(idx,1); state.selectedId=null; const el=$('#'+state.selectedId); if(el) el.remove(); refreshAll(); saveAuto(); }}
-
-  function refreshAll(){
-    // clear stage layers
-    $$('.layer', $('#stage')).forEach(el=>el.remove());
-    state.layers.forEach(drawLayerDom); refreshLayersList(); drawSelection(); renderBackground(); updateCamera(); updatePropsPanel();
+  // Snapping helpers
+  function applySnapping(l){
+    const step=10; // grid
+    // snap to grid
+    l.x = snap(l.x, step); l.y = snap(l.y, step);
+    // snap to center lines
+    const cx = l.x + l.w/2; const cy = l.y + l.h/2; const stageCx = state.stage.w/2; const stageCy = state.stage.h/2; const tol=6;
+    if(Math.abs(cx - stageCx) < tol) l.x += (stageCx - cx);
+    if(Math.abs(cy - stageCy) < tol) l.y += (stageCy - cy);
+    // optional: confine to safe area
+    if(state.confineSafe){
+      const left = SAFE_PX, top = SAFE_PX, right = state.stage.w - SAFE_PX, bottom = state.stage.h - SAFE_PX;
+      l.x = clamp(l.x, left, Math.max(left, right - l.w));
+      l.y = clamp(l.y, top,  Math.max(top,  bottom - l.h));
+    } else {
+      l.x = clamp(l.x, -state.stage.w, state.stage.w*2); l.y = clamp(l.y, -state.stage.h, state.stage.h*2);
+    }
   }
 
-  // Export PNG (render our own canvas)
+  const history = { stack: [], index: -1, max: 50 };
+function snapshot(){
+  return JSON.stringify({
+    model:state.model, bgImage:state.bgImage, layers:state.layers,
+    stage:state.stage, snapping:state.snapping, confineSafe:state.confineSafe
+  });
+}
+function applySnapshot(raw){
+  try{
+    const s=JSON.parse(raw);
+    state.model=s.model; state.bgImage=s.bgImage; state.layers=s.layers;
+    state.stage=s.stage; state.snapping=s.snapping; state.confineSafe=s.confineSafe;
+    setStageSize(state.stage.w,state.stage.h);
+    refreshAll();
+  }catch(e){}
+}
+function pushHistory(){
+  const raw=snapshot();
+  if(history.index>=0 && history.stack[history.index]===raw) return;
+  history.stack.splice(history.index+1);
+  history.stack.push(raw);
+  if(history.stack.length>history.max) history.stack.shift();
+  history.index=history.stack.length-1;
+}
+function undo(){ if(history.index>0){ history.index--; applySnapshot(history.stack[history.index]); toast('Undo'); } }
+function redo(){ if(history.index<history.stack.length-1){ history.index++; applySnapshot(history.stack[history.index]); toast('Redo'); } }
+function initUndoRedo(){
+  pushHistory();
+  $('#btnUndo')?.addEventListener('click', undo);
+  $('#btnRedo')?.addEventListener('click', redo);
+  document.addEventListener('keydown', (e)=>{
+    if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z'){ e.preventDefault(); if(e.shiftKey) redo(); else undo(); }
+    if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='y'){ e.preventDefault(); redo(); }
+  });
+}
+
+  // Actions
+  $('#btnNew').onclick=()=>{ if(confirm('¿Vaciar el lienzo?')){ state.layers=[]; state.bgImage=null; renderBackground(); refreshAll(); saveAuto(); }}
+  $('#btnDeleteLayer').onclick=()=>{ if(!state.selectedId) return; const idx=state.layers.findIndex(l=>l.id===state.selectedId); if(idx>=0){ state.layers.splice(idx,1); } state.selectedId=null; refreshAll(); saveAuto(); }
+
+  function moveLayer(id, dir){ // dir: +1 forward, -1 backward
+    const i=state.layers.findIndex(l=>l.id===id); if(i<0) return; const j=i+dir; if(j<0||j>=state.layers.length) return; const tmp=state.layers[i]; state.layers[i]=state.layers[j]; state.layers[j]=tmp; refreshAll(); saveAuto(); }
+
+  function alignSelected(which){ const l=layerById(state.selectedId); if(!l) return; const W=state.stage.w, H=state.stage.h; const left=SAFE_PX, top=SAFE_PX, right=W-SAFE_PX, bottom=H-SAFE_PX;
+    if(which==='left')   l.x=left;
+    if(which==='centerX') l.x=(W - l.w)/2;
+    if(which==='right')  l.x=right - l.w;
+    if(which==='top')    l.y=top;
+    if(which==='centerY') l.y=(H - l.h)/2;
+    if(which==='bottom') l.y=bottom - l.h;
+    positionLayerDom(l); drawSelection(); saveAuto(); }
+
+  function refreshAll(){
+    $$('.layer', $('#stage')).forEach(el=>el.remove());
+    state.layers.forEach(drawLayerDom); refreshLayersList(); drawSelection(); renderBackground(); updateCamera(); updatePropsPanel(); drawGuides();
+  }
+
+  // Export PNG (render our own canvas with camera punch-out)
   $('#btnExport').onclick=()=>{
     const canvas = document.createElement('canvas'); canvas.width=state.stage.w; canvas.height=state.stage.h; const ctx=canvas.getContext('2d');
-    // bg
-    if(state.bgImage){ const img=new Image(); img.onload=()=>{ ctx.drawImage(img,0,0,canvas.width,canvas.height); drawLayers(ctx); finish(); }; img.src=state.bgImage; }
-    else { ctx.fillStyle='#111'; ctx.fillRect(0,0,canvas.width,canvas.height); drawLayers(ctx); finish(); }
-    function drawLayers(ctx){
-      for(const l of state.layers){ ctx.save(); ctx.translate(l.x + l.w/2, l.y + l.h/2); ctx.rotate(l.rot*Math.PI/180); if(l.type==='image'){ const img=new Image(); img.src=l.dataUrl; // synchronous draw when loaded? we simplify using drawImage onload queued
-          // To ensure all images load before export, we chain draws
-        }
-      }
-    }
-    // Robust export ensuring images load sequentially
     (async function renderSeq(){
-      const ctx=canvas.getContext('2d');
       // bg
       if(state.bgImage){ await drawImg(ctx, state.bgImage, 0,0, canvas.width, canvas.height, 0); } else { ctx.fillStyle='#111'; ctx.fillRect(0,0,canvas.width,canvas.height); }
+      // layers in order
       for(const l of state.layers){ ctx.save(); ctx.translate(l.x + l.w/2, l.y + l.h/2); ctx.rotate(l.rot*Math.PI/180);
         if(l.type==='image'){
           await drawImg(ctx, l.dataUrl, -l.w/2, -l.h/2, l.w, l.h, 0);
@@ -491,13 +608,20 @@
         }
         ctx.restore();
       }
+      // punch-out camera
+      punchOutCamera(ctx);
       finish();
     })();
 
+    function punchOutCamera(ctx){ const c=state.model.cam; if(!c) return; ctx.save(); ctx.globalCompositeOperation='destination-out';
+      if(c.type==='circle'){ ctx.beginPath(); ctx.arc(c.x+c.w/2, c.y+c.h/2, Math.min(c.w,c.h)/2, 0, Math.PI*2); ctx.fill(); }
+      else { const r=c.r||0; roundRect(ctx, c.x, c.y, c.w, c.h, r); ctx.fill(); }
+      ctx.restore(); }
+
+    function roundRect(ctx, x, y, w, h, r){ ctx.beginPath(); ctx.moveTo(x+r, y); ctx.arcTo(x+w, y, x+w, y+h, r); ctx.arcTo(x+w, y+h, x, y+h, r); ctx.arcTo(x, y+h, x, y, r); ctx.arcTo(x, y, x+w, y, r); ctx.closePath(); }
+
     function drawImg(ctx, src, x,y,w,h, r){ return new Promise(res=>{ const img=new Image(); img.onload=()=>{ ctx.drawImage(img,x,y,w,h); res(); }; img.src=src; }) }
-    function wrapText(ctx, text, x, y, maxWidth, lineHeight){
-      const words=(text||'').split(' '); let line=''; let yy=y; for(let n=0;n<words.length;n++){ const test=line+words[n]+' '; const m=ctx.measureText(test).width; if(m>maxWidth && n>0){ ctx.fillText(line, x, yy); line=words[n]+' '; yy+=lineHeight; } else { line=test; } } ctx.fillText(line, x, yy);
-    }
+    function wrapText(ctx, text, x, y, maxWidth, lineHeight){ const words=(text||'').split(' '); let line=''; let yy=y; for(let n=0;n<words.length;n++){ const test=line+words[n]+' '; const m=ctx.measureText(test).width; if(m>maxWidth && n>0){ ctx.fillText(line, x, yy); line=words[n]+' '; yy+=lineHeight; } else { line=test; } } ctx.fillText(line, x, yy); }
     function finish(){ const url=canvas.toDataURL('image/png'); const a=document.createElement('a'); a.download='case-design.png'; a.href=url; a.click(); toast('PNG exportado'); }
   }
 
@@ -512,7 +636,7 @@
     const item={ id: Date.now(), name: (layerById(state.selectedId)?.name)||'Diseño', snapshot: null, project: { ...state, selectedId:null } };
     arr.push(item); localStorage.setItem(key, JSON.stringify(arr)); toast('Diseño guardado en tu cuenta'); }
 
-  $('#btnLoadLast').onclick=()=>{ const raw=localStorage.getItem(LS_LAST_KEY); if(!raw){ toast('No hay diseño previo'); return } const proj=JSON.parse(raw); Object.assign(state, { model:proj.model, bgImage:proj.bgImage, layers:proj.layers, stage:proj.stage }); setStageSize(state.stage.w, state.stage.h); renderBackground(); buildPhoneButtons(); refreshAll(); scrollToEditor(); toast('Proyecto cargado'); }
+  $('#btnLoadLast').onclick=()=>{ const raw=localStorage.getItem(LS_LAST_KEY); if(!raw){ toast('No hay diseño previo'); return } const proj=JSON.parse(raw); Object.assign(state, { model:proj.model, bgImage:proj.bgImage, layers:proj.layers, stage:proj.stage, snapping: proj.snapping ?? true }); setStageSize(state.stage.w, state.stage.h); renderBackground(); buildPhoneButtons(); refreshAll(); scrollToEditor(); toast('Proyecto cargado'); }
 
   // Auth (LocalStorage users)
   const authDlg=$('#authDlg');
@@ -522,10 +646,16 @@
 
   // Boot
   (function init(){
+    initUndoRedo();
     buildPhoneButtons(); setStageSize(state.stage.w, state.stage.h); renderBackground(); updateCamera();
-    // restore session
     const uRaw=localStorage.getItem(LS_SESSION_KEY); if(uRaw){ try{ state.user=JSON.parse(uRaw) }catch{} }
     refreshAll();
+    // toggles
+    const tSnap=$('#toggleSnap'); if(tSnap){ tSnap.checked = state.snapping; tSnap.addEventListener('change', (e)=>{ state.snapping=e.target.checked; saveAuto(); toast(state.snapping? 'Snap activado':'Snap desactivado'); }) }
+    const tConf=$('#toggleConfine'); if(tConf){ tConf.checked = state.confineSafe; tConf.addEventListener('change', (e)=>{ state.confineSafe=e.target.checked; saveAuto(); toast(state.confineSafe? 'Dentro de área segura':'Sin límites'); }) }
+    // align buttons
+    const map={ alLeft:'left', alCenterX:'centerX', alRight:'right', alTop:'top', alCenterY:'centerY', alBottom:'bottom' };
+    Object.entries(map).forEach(([id, w])=>{ const b=$('#'+id); if(b) b.addEventListener('click', ()=>alignSelected(w)); });
   })();
   </script>
 </body>
