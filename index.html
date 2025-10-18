@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>CaseCustomizer</title>
+  <title>CaseCustomizer • Demo HTML (v3)</title>
   <style>
     :root{
       --primary: hsl(260, 100%, 65%);
@@ -47,7 +47,7 @@
     .hero-badges{display:flex; gap:10px; flex-wrap:wrap; margin:12px 0 18px}
 
     /* EDITOR LAYOUT */
-    .editor-shell{margin-top:32px; display:grid; grid-template-columns: 260px 1fr 280px; gap:18px; align-items:start}
+    .editor-shell{margin-top:32px; display:grid; grid-template-columns: 260px 1fr 300px; gap:18px; align-items:start}
     .panel{padding:14px; border-radius: var(--radius); background: var(--card); box-shadow: var(--shadow-2); border:1px solid rgba(255,255,255,.06)}
     .panel h3{margin:6px 0 12px; font-size:14px; letter-spacing:.6px; text-transform:uppercase; color:var(--muted)}
 
@@ -70,12 +70,12 @@
 
     /* Selection box */
     .selection{position:absolute; border:1.5px dashed var(--accent); outline: 2px solid rgba(0,0,0,.25); box-shadow: 0 0 0 4px rgba(0,0,0,.18) inset; pointer-events:auto}
-    .handle{ position:absolute; width:14px; height:14px; border-radius:3px; background:var(--accent); outline:2px solid rgba(0,0,0,.5); cursor:nwse-resize }
-    .handle.tl{ left:-7px; top:-7px; cursor:nwse-resize }
-    .handle.tr{ right:-7px; top:-7px; cursor:nesw-resize }
-    .handle.bl{ left:-7px; bottom:-7px; cursor:nesw-resize }
-    .handle.br{ right:-7px; bottom:-7px; cursor:nwse-resize }
-    .handle.rot{ left:50%; top:-36px; transform:translateX(-50%); width:12px; height:12px; border-radius:999px; background:var(--primary); cursor:grab }
+    .handle{position:absolute; width:14px; height:14px; border-radius:3px; background:var(--accent); outline:2px solid rgba(0,0,0,.5)}
+    .handle.tl{left:-7px; top:-7px; cursor:nwse-resize}
+    .handle.tr{right:-7px; top:-7px; cursor:nesw-resize}
+    .handle.bl{left:-7px; bottom:-7px; cursor:nesw-resize}
+    .handle.br{right:-7px; bottom:-7px; cursor:nwse-resize}
+    .handle.rot{left:50%; top:-36px; transform:translateX(-50%); width:12px; height:12px; border-radius:999px; background:var(--primary); cursor:grab}
 
     .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
     .input, select{width:100%; padding:10px 12px; border-radius:10px; background:#0e1220; color:#e8ecff; border:1px solid rgba(255,255,255,.12)}
@@ -180,7 +180,7 @@
         <h3>Propiedades</h3>
         <div class="grid">
           <label>
-            <span class="hint">Capa seleccionada</span>
+            <span class="hint">Capa seleccionada (Shift/Ctrl/⌘ para multiselección)</span>
             <input id="layerName" class="input" placeholder="Nombre visible en lista" />
           </label>
           <div class="grid cols-2">
@@ -238,6 +238,11 @@
           <button class="btn ghost" id="alCenterY" title="Centrar vertical">Cen Y</button>
           <button class="btn ghost" id="alBottom" title="Alinear abajo">Aba</button>
         </div>
+        <div class="grid cols-3" id="distributeControls" style="margin-top:6px">
+          <button class="btn ghost" id="distH" title="Distribuir horizontalmente selección">Dist H</button>
+          <button class="btn ghost" id="distV" title="Distribuir verticalmente selección">Dist V</button>
+          <button class="btn ghost" id="equalWH" title="Igualar W/H a la capa foco">=W/H</button>
+        </div>
         <label class="row" style="margin-top:6px">
           <input id="toggleConfine" type="checkbox" style="scale:1.1; margin-right:8px" checked>
           <span class="hint">Forzar dentro de área segura</span>
@@ -255,12 +260,12 @@
           <div class="status" id="status">Listo.</div>
         </div>
         <div class="row" style="margin-top:8px; gap:8px">
-          <span class="hint">Consejo: Shift = mantener proporción • ▲/▼ = ordenar capas • 🔒 = bloquear edición</span>
+          <span class="hint">Consejo: Shift = mantener proporción • Shift/Ctrl/⌘ = selección múltiple • ▲/▼ = ordenar capas • 🔒 = bloquear</span>
         </div>
       </aside>
     </section>
 
-    <p class="hint" style="margin:18px 8px 0">Consejo: usa el mouse para arrastrar. Mantén <kbd>Shift</kbd> mientras redimensionas para mantener proporción. Usa rueda del mouse sobre el deslizador para rotación fina.</p>
+    <p class="hint" style="margin:18px 8px 0">Consejo: usa el mouse para arrastrar. Redimensiona desde las esquinas. Mantén <kbd>Shift</kbd> para mantener proporción. Usa rueda del mouse sobre el deslizador para rotación fina.</p>
   </main>
 
   <!-- AUTH DIALOG (LocalStorage demo) -->
@@ -302,7 +307,9 @@
     bgImage: null, // phone photo or model texture
     layers: [], // {id,type:'image'|'text', name, x,y,w,h, rot, dataUrl? , text/font/size/color, locked?}
     selectedId: null,
-    stage:{w:360, h:720},    snapping:true,
+    selectedIds: [],
+    stage:{w:360, h:720},
+    snapping:true,
     confineSafe:true
   };
 
@@ -312,25 +319,23 @@
     PHONE_MODELS.forEach(m=>{
       const btn = document.createElement('button');
       btn.className='phone-btn' + (state.model.id===m.id?' active':'');
-      btn.innerHTML = `<div style="font-weight:800">${m.name}</div><div class="hint">${m.w}×${m.h}</div>`;
+      btn.innerHTML = `<div style="font-weight:800">\${m.name}</div><div class="hint">\${m.w}×\${m.h}</div>`;
       btn.onclick=()=>{ state.model=m; setStageSize(m.w,m.h); updateCamera(); $$('.phone-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); saveAuto(); }
       list.appendChild(btn);
     })
   }
 
   function setStageSize(w,h){
-    state.stage.w=w; state.stage.h=h; const s=$('#stage'); s.style.width=w+'px'; s.style.height=h+'px'; $('#stageSizeInfo').textContent=`${w}×${h}`;
+    state.stage.w=w; state.stage.h=h; const s=$('#stage'); s.style.width=w+'px'; s.style.height=h+'px'; $('#stageSizeInfo').textContent=`\${w}×\${h}`;
   }
 
   function updateCamera(){
     const c=state.model.cam; const el=$('#cameraOverlay'); const mask=$('#overlayMask');
     if(!c){ el.style.display='none'; mask.style.display='none'; return }
-    // visible camera decoration
     el.style.display='block'; el.style.left=c.x+'px'; el.style.top=c.y+'px'; el.style.width=c.w+'px'; el.style.height=c.h+'px'; el.style.borderRadius=(c.type==='pill'||c.type==='rounded'||c.type==='circle'? (c.r+'px') : '0');
 
-    // build SVG mask with a transparent cut-out where the camera lives
     mask.style.display='block';
-    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${state.stage.w}' height='${state.stage.h}' viewBox='0 0 ${state.stage.w} ${state.stage.h}'>
+        const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${state.stage.w}' height='${state.stage.h}' viewBox='0 0 ${state.stage.w} ${state.stage.h}'>
       <defs>
         <mask id='cut'>
           <rect x='0' y='0' width='${state.stage.w}' height='${state.stage.h}' fill='white' />
@@ -351,13 +356,7 @@
     const inner = { x: safe, y: safe, w: w - safe*2, h: h - safe*2 };
     const outer = { x: bleed, y: bleed, w: w - bleed*2, h: h - bleed*2 };
     const cx=w/2, cy=h/2;
-    g.innerHTML = `
-      <svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}' viewBox='0 0 ${w} ${h}'>
-        <rect x='${outer.x}' y='${outer.y}' width='${outer.w}' height='${outer.h}' fill='none' stroke='rgba(6,182,212,0.65)' stroke-dasharray='8 6' stroke-width='2'/>
-        <rect x='${inner.x}' y='${inner.y}' width='${inner.w}' height='${inner.h}' fill='none' stroke='rgba(124,58,237,0.8)' stroke-dasharray='4 6' stroke-width='2'/>
-        <line x1='${cx}' y1='0' x2='${cx}' y2='${h}' stroke='rgba(255,255,255,0.15)' stroke-width='1'/>
-        <line x1='0' y1='${cy}' x2='${w}' y2='${cy}' stroke='rgba(255,255,255,0.15)' stroke-width='1'/>
-      </svg>`;
+    g.innerHTML = `\n      <svg xmlns='http://www.w3.org/2000/svg' width='\${w}' height='\${h}' viewBox='0 0 \${w} \${h}'>\n        <rect x='\${outer.x}' y='\${outer.y}' width='\${outer.w}' height='\${outer.h}' fill='none' stroke='rgba(6,182,212,0.65)' stroke-dasharray='8 6' stroke-width='2'/>\n        <rect x='\${inner.x}' y='\${inner.y}' width='\${inner.w}' height='\${inner.h}' fill='none' stroke='rgba(124,58,237,0.8)' stroke-dasharray='4 6' stroke-width='2'/>\n        <line x1='\${cx}' y1='0' x2='\${cx}' y2='\${h}' stroke='rgba(255,255,255,0.15)' stroke-width='1'/>\n        <line x1='0' y1='\${cy}' x2='\${w}' y2='\${cy}' stroke='rgba(255,255,255,0.15)' stroke-width='1'/>\n      </svg>\n    `;
   }
 
   function scrollToEditor(){
@@ -371,7 +370,7 @@
   $('#btnClearPhone').onclick=()=>{ state.bgImage=null; renderBackground(); saveAuto(); }
 
   function renderBackground(){
-    const st=$('#stage'); st.style.background = state.bgImage ? `#000 url(${state.bgImage}) center/cover no-repeat` : '#111';
+    const st=$('#stage'); st.style.background = state.bgImage ? `#000 url(\${state.bgImage}) center/cover no-repeat` : '#111';
   }
 
   // Layer management
@@ -397,7 +396,6 @@
     let el = document.getElementById(layer.id);
     if(!el){ el=document.createElement('div'); el.className='layer'; el.id=layer.id; $('#stage').appendChild(el); el.addEventListener('pointerdown', onLayerPointerDown) }
     el.style.pointerEvents = layer.locked? 'none':'auto';
-    // content
     el.innerHTML='';
     if(layer.type==='image'){
       const img = document.createElement('img'); img.src = layer.dataUrl; img.draggable=false; img.alt=''; el.appendChild(img);
@@ -410,25 +408,24 @@
 
   function positionLayerDom(layer){
     const el = document.getElementById(layer.id); if(!el) return;
-    el.style.left=layer.x+'px'; el.style.top=layer.y+'px'; el.style.width=layer.w+'px'; el.style.height=layer.h+'px'; el.style.transform=`rotate(${layer.rot}deg)`;
+    el.style.left=layer.x+'px'; el.style.top=layer.y+'px'; el.style.width=layer.w+'px'; el.style.height=layer.h+'px'; el.style.transform=`rotate(\${layer.rot}deg)`;
     if(layer.type==='image'){
       const img=el.querySelector('img'); img.style.width='100%'; img.style.height='100%'; img.style.objectFit='contain';
     } else {
-      const t=el.firstChild; t.style.width='100%'; t.style.height='100%'; displayTextAutosize(el, layer);
+      const t=el.firstChild; t.style.width='100%'; t.style.height='100%'; el.style.display='flex'; el.style.alignItems='center'; el.style.justifyContent='center';
     }
   }
 
-  function displayTextAutosize(el, layer){ el.style.display='flex'; el.style.alignItems='center'; el.style.justifyContent='center'; }
-
   function refreshLayersList(){
     const list=$('#layersList'); list.innerHTML='';
+    const selectedSet = new Set(state.selectedIds.length? state.selectedIds : (state.selectedId? [state.selectedId]: []));
     state.layers.slice().reverse().forEach(layer=>{
       const row = document.createElement('div');
       row.className='phone-btn'; row.style.textAlign='left'; row.style.display='grid'; row.style.gridTemplateColumns='1fr auto'; row.style.alignItems='center';
       const title = document.createElement('button');
-      title.className='btn ghost'; title.style.padding='8px 10px'; title.style.background='transparent'; title.textContent=layer.name + ` (${layer.type})`;
-      if(state.selectedId===layer.id) row.classList.add('active');
-      title.onclick=()=>selectLayer(layer.id);
+      title.className='btn ghost'; title.style.padding='8px 10px'; title.style.background='transparent'; title.textContent=layer.name + ` (\${layer.type})`;
+      if(selectedSet.has(layer.id)) row.classList.add('active');
+      title.onclick=(ev)=>selectLayer(layer.id, ev.shiftKey||ev.metaKey||ev.ctrlKey, true);
       const actions = document.createElement('div'); actions.className='row';
       const up=document.createElement('button'); up.className='btn ghost'; up.textContent='▲'; up.style.padding='6px 8px'; up.onclick=(e)=>{e.stopPropagation(); moveLayer(layer.id, +1)};
       const down=document.createElement('button'); down.className='btn ghost'; down.textContent='▼'; down.style.padding='6px 8px'; down.onclick=(e)=>{e.stopPropagation(); moveLayer(layer.id, -1)};
@@ -439,7 +436,17 @@
     })
   }
 
-  function selectLayer(id){ state.selectedId=id; refreshLayersList(); updatePropsPanel(); drawSelection(); selectionEl.style.zIndex = '9999'; }
+  function selectLayer(id, append=false){
+    if(!append){ state.selectedIds = [id]; }
+    else{
+      const i = state.selectedIds.indexOf(id);
+      if(i>=0){ state.selectedIds.splice(i,1); }
+      else { state.selectedIds.push(id); }
+      if(!state.selectedIds.length) state.selectedIds=[id];
+    }
+    state.selectedId = state.selectedIds[state.selectedIds.length-1] || id;
+    refreshLayersList(); updatePropsPanel(); drawSelection();
+  }
 
   function updatePropsPanel(){
     const l=layerById(state.selectedId);
@@ -467,16 +474,18 @@
   // Selection box & transform handles
   let selectionEl=null, dragMode=null, start={x:0,y:0, l:null, mx:0,my:0};
   function drawSelection(){
-    if(selectionEl) selectionEl.remove(); selectionEl=null; const l=layerById(state.selectedId); if(!l) return;
+    if(selectionEl) selectionEl.remove(); selectionEl=null; const focus=layerById(state.selectedId); if(!focus) return;
     const el=document.createElement('div'); el.className='selection';
-    el.style.left=l.x+'px'; el.style.top=l.y+'px'; el.style.width=l.w+'px'; el.style.height=l.h+'px'; el.style.transform=`rotate(${l.rot}deg)`;
+    el.style.left=focus.x+'px'; el.style.top=focus.y+'px'; el.style.width=focus.w+'px'; el.style.height=focus.h+'px'; el.style.transform=`rotate(\${focus.rot}deg)`; el.style.zIndex='9999';
     const mk=(c)=>{ const h=document.createElement('div'); h.className='handle '+c; el.appendChild(h); }
     mk('tl'); mk('tr'); mk('bl'); mk('br'); mk('rot');
     $('#stage').appendChild(el); selectionEl=el;
   }
 
   function onLayerPointerDown(e){
-    const id=e.currentTarget.id; const l=layerById(id); if(!l) return; if(l.locked) return; selectLayer(id);
+    const id=e.currentTarget.id; const l=layerById(id); if(!l) return; if(l.locked) return;
+    const append = e.shiftKey || e.metaKey || e.ctrlKey;
+    selectLayer(id, append);
     dragMode='move';
     start={x:e.clientX, y:e.clientY, l: {...l}, mx:l.x, my:l.y};
     window.addEventListener('pointermove', onPointerMove); window.addEventListener('pointerup', onPointerUp);
@@ -520,13 +529,10 @@
   // Snapping helpers
   function applySnapping(l){
     const step=10; // grid
-    // snap to grid
     l.x = snap(l.x, step); l.y = snap(l.y, step);
-    // snap to center lines
     const cx = l.x + l.w/2; const cy = l.y + l.h/2; const stageCx = state.stage.w/2; const stageCy = state.stage.h/2; const tol=6;
     if(Math.abs(cx - stageCx) < tol) l.x += (stageCx - cx);
     if(Math.abs(cy - stageCy) < tol) l.y += (stageCy - cy);
-    // optional: confine to safe area
     if(state.confineSafe){
       const left = SAFE_PX, top = SAFE_PX, right = state.stage.w - SAFE_PX, bottom = state.stage.h - SAFE_PX;
       l.x = clamp(l.x, left, Math.max(left, right - l.w));
@@ -536,57 +542,48 @@
     }
   }
 
-  const history = { stack: [], index: -1, max: 50 };
-function snapshot(){
-  return JSON.stringify({
-    model:state.model, bgImage:state.bgImage, layers:state.layers,
-    stage:state.stage, snapping:state.snapping, confineSafe:state.confineSafe
-  });
-}
-function applySnapshot(raw){
-  try{
-    const s=JSON.parse(raw);
-    state.model=s.model; state.bgImage=s.bgImage; state.layers=s.layers;
-    state.stage=s.stage; state.snapping=s.snapping; state.confineSafe=s.confineSafe;
-    setStageSize(state.stage.w,state.stage.h);
-    refreshAll();
-  }catch(e){}
-}
-function pushHistory(){
-  const raw=snapshot();
-  if(history.index>=0 && history.stack[history.index]===raw) return;
-  history.stack.splice(history.index+1);
-  history.stack.push(raw);
-  if(history.stack.length>history.max) history.stack.shift();
-  history.index=history.stack.length-1;
-}
-function undo(){ if(history.index>0){ history.index--; applySnapshot(history.stack[history.index]); toast('Undo'); } }
-function redo(){ if(history.index<history.stack.length-1){ history.index++; applySnapshot(history.stack[history.index]); toast('Redo'); } }
-function initUndoRedo(){
-  pushHistory();
-  $('#btnUndo')?.addEventListener('click', undo);
-  $('#btnRedo')?.addEventListener('click', redo);
-  document.addEventListener('keydown', (e)=>{
-    if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z'){ e.preventDefault(); if(e.shiftKey) redo(); else undo(); }
-    if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='y'){ e.preventDefault(); redo(); }
-  });
-}
-
   // Actions
-  $('#btnNew').onclick=()=>{ if(confirm('¿Vaciar el lienzo?')){ state.layers=[]; state.bgImage=null; renderBackground(); refreshAll(); saveAuto(); }}
-  $('#btnDeleteLayer').onclick=()=>{ if(!state.selectedId) return; const idx=state.layers.findIndex(l=>l.id===state.selectedId); if(idx>=0){ state.layers.splice(idx,1); } state.selectedId=null; refreshAll(); saveAuto(); }
+  $('#btnNew').onclick=()=>{ if(confirm('¿Vaciar el lienzo?')){ state.layers=[]; state.bgImage=null; state.selectedIds=[]; state.selectedId=null; renderBackground(); refreshAll(); saveAuto(); }}
+  $('#btnDeleteLayer').onclick=()=>{ const ids=state.selectedIds.length? state.selectedIds : (state.selectedId? [state.selectedId]: []); if(!ids.length) return; ids.forEach(id=>{ const idx=state.layers.findIndex(l=>l.id===id); if(idx>=0) state.layers.splice(idx,1); }); state.selectedIds=[]; state.selectedId=null; refreshAll(); saveAuto(); }
 
   function moveLayer(id, dir){ // dir: +1 forward, -1 backward
     const i=state.layers.findIndex(l=>l.id===id); if(i<0) return; const j=i+dir; if(j<0||j>=state.layers.length) return; const tmp=state.layers[i]; state.layers[i]=state.layers[j]; state.layers[j]=tmp; refreshAll(); saveAuto(); }
 
-  function alignSelected(which){ const l=layerById(state.selectedId); if(!l) return; const W=state.stage.w, H=state.stage.h; const left=SAFE_PX, top=SAFE_PX, right=W-SAFE_PX, bottom=H-SAFE_PX;
-    if(which==='left')   l.x=left;
-    if(which==='centerX') l.x=(W - l.w)/2;
-    if(which==='right')  l.x=right - l.w;
-    if(which==='top')    l.y=top;
-    if(which==='centerY') l.y=(H - l.h)/2;
-    if(which==='bottom') l.y=bottom - l.h;
-    positionLayerDom(l); drawSelection(); saveAuto(); }
+  function alignSelected(which){
+    const ids = state.selectedIds.length? state.selectedIds : (state.selectedId? [state.selectedId]: []);
+    const W=state.stage.w, H=state.stage.h; const left=SAFE_PX, top=SAFE_PX, right=W-SAFE_PX, bottom=H-SAFE_PX;
+    ids.forEach(id=>{ const l=layerById(id); if(!l) return;
+      if(which==='left')   l.x=left;
+      if(which==='centerX') l.x=(W - l.w)/2;
+      if(which==='right')  l.x=right - l.w;
+      if(which==='top')    l.y=top;
+      if(which==='centerY') l.y=(H - l.h)/2;
+      if(which==='bottom') l.y=bottom - l.h;
+      positionLayerDom(l);
+    });
+    drawSelection(); saveAuto();
+  }
+
+  function distributeLayers(axis){
+    const ids = state.selectedIds.length>=3? state.selectedIds : state.layers.filter(l=>!l.locked).map(l=>l.id);
+    const items = ids.map(layerById).filter(Boolean);
+    if(items.length < 3) return;
+    const left=SAFE_PX, top=SAFE_PX, right=state.stage.w - SAFE_PX, bottom=state.stage.h - SAFE_PX;
+    if(axis==='H'){
+      const totalW = items.reduce((s,l)=>s+l.w,0);
+      const space = (right - left - totalW) / (items.length - 1);
+      let x = left;
+      for(const l of items){ l.x = x; x += l.w + space; }
+    } else {
+      const totalH = items.reduce((s,l)=>s+l.h,0);
+      const space = (bottom - top - totalH) / (items.length - 1);
+      let y = top;
+      for(const l of items){ l.y = y; y += l.h + space; }
+    }
+    state.layers.forEach(positionLayerDom); drawSelection(); saveAuto();
+  }
+
+  function equalizeWH(){ const ref=layerById(state.selectedId); if(!ref) return; (state.selectedIds.length? state.selectedIds : state.layers.map(l=>l.id)).forEach(id=>{ const l=layerById(id); if(l && l.id!==ref.id && !l.locked){ l.w=ref.w; l.h=ref.h; positionLayerDom(l);} }); drawSelection(); saveAuto(); }
 
   function refreshAll(){
     $$('.layer', $('#stage')).forEach(el=>el.remove());
@@ -604,7 +601,7 @@ function initUndoRedo(){
         if(l.type==='image'){
           await drawImg(ctx, l.dataUrl, -l.w/2, -l.h/2, l.w, l.h, 0);
         } else {
-          ctx.fillStyle=l.color||'#fff'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font=`${l.size||32}px ${l.font||'Inter'}`; wrapText(ctx, l.text||'', 0,0, l.w*.9, l.size*1.2);
+          ctx.fillStyle=l.color||'#fff'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font=`\${l.size||32}px \${l.font||'Inter'}`; wrapText(ctx, l.text||'', 0,0, l.w*.9, l.size*1.2);
         }
         ctx.restore();
       }
@@ -636,7 +633,7 @@ function initUndoRedo(){
     const item={ id: Date.now(), name: (layerById(state.selectedId)?.name)||'Diseño', snapshot: null, project: { ...state, selectedId:null } };
     arr.push(item); localStorage.setItem(key, JSON.stringify(arr)); toast('Diseño guardado en tu cuenta'); }
 
-  $('#btnLoadLast').onclick=()=>{ const raw=localStorage.getItem(LS_LAST_KEY); if(!raw){ toast('No hay diseño previo'); return } const proj=JSON.parse(raw); Object.assign(state, { model:proj.model, bgImage:proj.bgImage, layers:proj.layers, stage:proj.stage, snapping: proj.snapping ?? true }); setStageSize(state.stage.w, state.stage.h); renderBackground(); buildPhoneButtons(); refreshAll(); scrollToEditor(); toast('Proyecto cargado'); }
+  $('#btnLoadLast').onclick=()=>{ const raw=localStorage.getItem(LS_LAST_KEY); if(!raw){ toast('No hay diseño previo'); return } const proj=JSON.parse(raw); Object.assign(state, { model:proj.model, bgImage:proj.bgImage, layers:proj.layers, stage:proj.stage, snapping: proj.snapping ?? true, confineSafe: proj.confineSafe ?? true }); setStageSize(state.stage.w, state.stage.h); renderBackground(); buildPhoneButtons(); refreshAll(); scrollToEditor(); toast('Proyecto cargado'); }
 
   // Auth (LocalStorage users)
   const authDlg=$('#authDlg');
@@ -646,16 +643,16 @@ function initUndoRedo(){
 
   // Boot
   (function init(){
-    initUndoRedo();
     buildPhoneButtons(); setStageSize(state.stage.w, state.stage.h); renderBackground(); updateCamera();
     const uRaw=localStorage.getItem(LS_SESSION_KEY); if(uRaw){ try{ state.user=JSON.parse(uRaw) }catch{} }
     refreshAll();
-    // toggles
     const tSnap=$('#toggleSnap'); if(tSnap){ tSnap.checked = state.snapping; tSnap.addEventListener('change', (e)=>{ state.snapping=e.target.checked; saveAuto(); toast(state.snapping? 'Snap activado':'Snap desactivado'); }) }
     const tConf=$('#toggleConfine'); if(tConf){ tConf.checked = state.confineSafe; tConf.addEventListener('change', (e)=>{ state.confineSafe=e.target.checked; saveAuto(); toast(state.confineSafe? 'Dentro de área segura':'Sin límites'); }) }
-    // align buttons
     const map={ alLeft:'left', alCenterX:'centerX', alRight:'right', alTop:'top', alCenterY:'centerY', alBottom:'bottom' };
     Object.entries(map).forEach(([id, w])=>{ const b=$('#'+id); if(b) b.addEventListener('click', ()=>alignSelected(w)); });
+    $('#distH')?.addEventListener('click', ()=>distributeLayers('H'));
+    $('#distV')?.addEventListener('click', ()=>distributeLayers('V'));
+    $('#equalWH')?.addEventListener('click', equalizeWH);
   })();
   </script>
 </body>
