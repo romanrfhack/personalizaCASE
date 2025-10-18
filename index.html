@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>CaseCustomizer • Demo HTML (v3)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&family=Montserrat:wght@400;700&family=Poppins:wght@400;700&family=Oswald:wght@400;600&family=Raleway:wght@400;700&family=Lobster&display=swap" rel="stylesheet">
   <style>
     :root{
       --primary: hsl(260, 100%, 65%);
@@ -47,7 +48,7 @@
     .hero-badges{display:flex; gap:10px; flex-wrap:wrap; margin:12px 0 18px}
 
     /* EDITOR LAYOUT */
-    .editor-shell{margin-top:32px; display:grid; grid-template-columns: 260px 1fr 300px; gap:18px; align-items:start}
+    .editor-shell{margin-top:32px; display:grid; grid-template-columns: 260px 1fr 280px; gap:18px; align-items:start}
     .panel{padding:14px; border-radius: var(--radius); background: var(--card); box-shadow: var(--shadow-2); border:1px solid rgba(255,255,255,.06)}
     .panel h3{margin:6px 0 12px; font-size:14px; letter-spacing:.6px; text-transform:uppercase; color:var(--muted)}
 
@@ -171,6 +172,7 @@
           <div class="camera" id="cameraOverlay"></div>
           <div id="overlayMask" class="case-overlay"></div>
           <div id="guidesOverlay" class="guides-overlay"></div>
+          <div id="smartGuides" class="case-overlay"></div>
         </div>
         <!-- selection box injected here -->
       </div>
@@ -180,7 +182,7 @@
         <h3>Propiedades</h3>
         <div class="grid">
           <label>
-            <span class="hint">Capa seleccionada (Shift/Ctrl/⌘ para multiselección)</span>
+            <span class="hint">Capa seleccionada</span>
             <input id="layerName" class="input" placeholder="Nombre visible en lista" />
           </label>
           <div class="grid cols-2">
@@ -204,12 +206,13 @@
                 <span class="hint">Fuente</span>
                 <select id="textFont" class="input">
                   <option>Inter</option>
+                  <option>Montserrat</option>
+                  <option>Poppins</option>
+                  <option>Oswald</option>
+                  <option>Raleway</option>
+                  <option>Lobster</option>
                   <option>Arial</option>
-                  <option>Segoe UI</option>
                   <option>Roboto</option>
-                  <option>Impact</option>
-                  <option>Georgia</option>
-                  <option>Courier New</option>
                 </select>
               </label>
               <label>
@@ -255,17 +258,19 @@
           <button id="btnExport" class="btn ghost">Exportar PNG</button>
           <button id="btnNew" class="btn ghost">Nuevo</button>
           <button id="btnDeleteLayer" class="btn ghost">Borrar capa</button>
+          <button id="btnUndo" class="btn ghost">Undo</button>
+          <button id="btnRedo" class="btn ghost">Redo</button>
         </div>
         <div class="footerbar">
           <div class="status" id="status">Listo.</div>
         </div>
         <div class="row" style="margin-top:8px; gap:8px">
-          <span class="hint">Consejo: Shift = mantener proporción • Shift/Ctrl/⌘ = selección múltiple • ▲/▼ = ordenar capas • 🔒 = bloquear</span>
+          <span class="hint">Consejo: Shift = mantener proporción • ▲/▼ = ordenar capas • 🔒 = bloquear edición</span>
         </div>
       </aside>
     </section>
 
-    <p class="hint" style="margin:18px 8px 0">Consejo: usa el mouse para arrastrar. Redimensiona desde las esquinas. Mantén <kbd>Shift</kbd> para mantener proporción. Usa rueda del mouse sobre el deslizador para rotación fina.</p>
+    <p class="hint" style="margin:18px 8px 0">Consejo: usa el mouse para arrastrar. Mantén <kbd>Shift</kbd> mientras redimensionas para mantener proporción. Usa rueda del mouse sobre el deslizador para rotación fina.</p>
   </main>
 
   <!-- AUTH DIALOG (LocalStorage demo) -->
@@ -293,6 +298,14 @@
   const BLEED_PX = 24; // margen extra para corte
   const SAFE_PX  = 18; // margen seguro para contenido
 
+  // --- Undo / Redo ---
+  const history = { stack: [], index: -1, max: 50 };
+  function snapshot(){ return JSON.stringify({ model:state.model, bgImage:state.bgImage, layers:state.layers, stage:state.stage, snapping:state.snapping, confineSafe:state.confineSafe }); }
+  function applySnapshot(raw){ try{ const s=JSON.parse(raw); state.model=s.model; state.bgImage=s.bgImage; state.layers=s.layers; state.stage=s.stage; state.snapping=s.snapping; state.confineSafe=s.confineSafe; setStageSize(state.stage.w,state.stage.h); refreshAll(); }catch(e){} }
+  function pushHistory(){ const raw=snapshot(); if(history.index>=0 && history.stack[history.index]===raw) return; history.stack.splice(history.index+1); history.stack.push(raw); if(history.stack.length>history.max) history.stack.shift(); history.index=history.stack.length-1; }
+  function undo(){ if(history.index>0){ history.index--; applySnapshot(history.stack[history.index]); toast('Undo'); } }
+  function redo(){ if(history.index<history.stack.length-1){ history.index++; applySnapshot(history.stack[history.index]); toast('Redo'); } }
+
   // --- Phone Models (with camera type for punch-out) ---
   const PHONE_MODELS = [
     { id:'iph15pro', name:'iPhone 15 Pro', w:360, h:720, cam:{x:360-22-92, y:20, w:92, h:92, r:22, type:'rounded'}},
@@ -308,8 +321,7 @@
     layers: [], // {id,type:'image'|'text', name, x,y,w,h, rot, dataUrl? , text/font/size/color, locked?}
     selectedId: null,
     selectedIds: [],
-    stage:{w:360, h:720},
-    snapping:true,
+    stage:{w:360, h:720},    snapping:true,
     confineSafe:true
   };
 
@@ -319,23 +331,25 @@
     PHONE_MODELS.forEach(m=>{
       const btn = document.createElement('button');
       btn.className='phone-btn' + (state.model.id===m.id?' active':'');
-      btn.innerHTML = `<div style="font-weight:800">\${m.name}</div><div class="hint">\${m.w}×\${m.h}</div>`;
+      btn.innerHTML = `<div style="font-weight:800">${m.name}</div><div class="hint">${m.w}×${m.h}</div>`;
       btn.onclick=()=>{ state.model=m; setStageSize(m.w,m.h); updateCamera(); $$('.phone-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); saveAuto(); }
       list.appendChild(btn);
     })
   }
 
   function setStageSize(w,h){
-    state.stage.w=w; state.stage.h=h; const s=$('#stage'); s.style.width=w+'px'; s.style.height=h+'px'; $('#stageSizeInfo').textContent=`\${w}×\${h}`;
+    state.stage.w=w; state.stage.h=h; const s=$('#stage'); s.style.width=w+'px'; s.style.height=h+'px'; $('#stageSizeInfo').textContent=`${w}×${h}`;
   }
 
   function updateCamera(){
     const c=state.model.cam; const el=$('#cameraOverlay'); const mask=$('#overlayMask');
     if(!c){ el.style.display='none'; mask.style.display='none'; return }
+    // visible camera decoration
     el.style.display='block'; el.style.left=c.x+'px'; el.style.top=c.y+'px'; el.style.width=c.w+'px'; el.style.height=c.h+'px'; el.style.borderRadius=(c.type==='pill'||c.type==='rounded'||c.type==='circle'? (c.r+'px') : '0');
 
+    // build SVG mask with a transparent cut-out where the camera lives
     mask.style.display='block';
-        const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${state.stage.w}' height='${state.stage.h}' viewBox='0 0 ${state.stage.w} ${state.stage.h}'>
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${state.stage.w}' height='${state.stage.h}' viewBox='0 0 ${state.stage.w} ${state.stage.h}'>
       <defs>
         <mask id='cut'>
           <rect x='0' y='0' width='${state.stage.w}' height='${state.stage.h}' fill='white' />
@@ -356,7 +370,13 @@
     const inner = { x: safe, y: safe, w: w - safe*2, h: h - safe*2 };
     const outer = { x: bleed, y: bleed, w: w - bleed*2, h: h - bleed*2 };
     const cx=w/2, cy=h/2;
-    g.innerHTML = `\n      <svg xmlns='http://www.w3.org/2000/svg' width='\${w}' height='\${h}' viewBox='0 0 \${w} \${h}'>\n        <rect x='\${outer.x}' y='\${outer.y}' width='\${outer.w}' height='\${outer.h}' fill='none' stroke='rgba(6,182,212,0.65)' stroke-dasharray='8 6' stroke-width='2'/>\n        <rect x='\${inner.x}' y='\${inner.y}' width='\${inner.w}' height='\${inner.h}' fill='none' stroke='rgba(124,58,237,0.8)' stroke-dasharray='4 6' stroke-width='2'/>\n        <line x1='\${cx}' y1='0' x2='\${cx}' y2='\${h}' stroke='rgba(255,255,255,0.15)' stroke-width='1'/>\n        <line x1='0' y1='\${cy}' x2='\${w}' y2='\${cy}' stroke='rgba(255,255,255,0.15)' stroke-width='1'/>\n      </svg>\n    `;
+    g.innerHTML = `
+      <svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}' viewBox='0 0 ${w} ${h}'>
+        <rect x='${outer.x}' y='${outer.y}' width='${outer.w}' height='${outer.h}' fill='none' stroke='rgba(6,182,212,0.65)' stroke-dasharray='8 6' stroke-width='2'/>
+        <rect x='${inner.x}' y='${inner.y}' width='${inner.w}' height='${inner.h}' fill='none' stroke='rgba(124,58,237,0.8)' stroke-dasharray='4 6' stroke-width='2'/>
+        <line x1='${cx}' y1='0' x2='${cx}' y2='${h}' stroke='rgba(255,255,255,0.15)' stroke-width='1'/>
+        <line x1='0' y1='${cy}' x2='${w}' y2='${cy}' stroke='rgba(255,255,255,0.15)' stroke-width='1'/>
+      </svg>`;
   }
 
   function scrollToEditor(){
@@ -370,7 +390,7 @@
   $('#btnClearPhone').onclick=()=>{ state.bgImage=null; renderBackground(); saveAuto(); }
 
   function renderBackground(){
-    const st=$('#stage'); st.style.background = state.bgImage ? `#000 url(\${state.bgImage}) center/cover no-repeat` : '#111';
+    const st=$('#stage'); st.style.background = state.bgImage ? `#000 url(${state.bgImage}) center/cover no-repeat` : '#111';
   }
 
   // Layer management
@@ -396,6 +416,7 @@
     let el = document.getElementById(layer.id);
     if(!el){ el=document.createElement('div'); el.className='layer'; el.id=layer.id; $('#stage').appendChild(el); el.addEventListener('pointerdown', onLayerPointerDown) }
     el.style.pointerEvents = layer.locked? 'none':'auto';
+    // content
     el.innerHTML='';
     if(layer.type==='image'){
       const img = document.createElement('img'); img.src = layer.dataUrl; img.draggable=false; img.alt=''; el.appendChild(img);
@@ -408,13 +429,15 @@
 
   function positionLayerDom(layer){
     const el = document.getElementById(layer.id); if(!el) return;
-    el.style.left=layer.x+'px'; el.style.top=layer.y+'px'; el.style.width=layer.w+'px'; el.style.height=layer.h+'px'; el.style.transform=`rotate(\${layer.rot}deg)`;
+    el.style.left=layer.x+'px'; el.style.top=layer.y+'px'; el.style.width=layer.w+'px'; el.style.height=layer.h+'px'; el.style.transform=`rotate(${layer.rot}deg)`;
     if(layer.type==='image'){
       const img=el.querySelector('img'); img.style.width='100%'; img.style.height='100%'; img.style.objectFit='contain';
     } else {
-      const t=el.firstChild; t.style.width='100%'; t.style.height='100%'; el.style.display='flex'; el.style.alignItems='center'; el.style.justifyContent='center';
+      const t=el.firstChild; t.style.width='100%'; t.style.height='100%'; displayTextAutosize(el, layer);
     }
   }
+
+  function displayTextAutosize(el, layer){ el.style.display='flex'; el.style.alignItems='center'; el.style.justifyContent='center'; }
 
   function refreshLayersList(){
     const list=$('#layersList'); list.innerHTML='';
@@ -423,7 +446,7 @@
       const row = document.createElement('div');
       row.className='phone-btn'; row.style.textAlign='left'; row.style.display='grid'; row.style.gridTemplateColumns='1fr auto'; row.style.alignItems='center';
       const title = document.createElement('button');
-      title.className='btn ghost'; title.style.padding='8px 10px'; title.style.background='transparent'; title.textContent=layer.name + ` (\${layer.type})`;
+      title.className='btn ghost'; title.style.padding='8px 10px'; title.style.background='transparent'; title.textContent=layer.name + ` (${layer.type})`;
       if(selectedSet.has(layer.id)) row.classList.add('active');
       title.onclick=(ev)=>selectLayer(layer.id, ev.shiftKey||ev.metaKey||ev.ctrlKey, true);
       const actions = document.createElement('div'); actions.className='row';
@@ -444,7 +467,7 @@
       else { state.selectedIds.push(id); }
       if(!state.selectedIds.length) state.selectedIds=[id];
     }
-    state.selectedId = state.selectedIds[state.selectedIds.length-1] || id;
+    state.selectedId = state.selectedIds[state.selectedIds.length-1] || id; // foco
     refreshLayersList(); updatePropsPanel(); drawSelection();
   }
 
@@ -473,10 +496,11 @@
 
   // Selection box & transform handles
   let selectionEl=null, dragMode=null, start={x:0,y:0, l:null, mx:0,my:0};
+  let marqueeEl=null;
   function drawSelection(){
-    if(selectionEl) selectionEl.remove(); selectionEl=null; const focus=layerById(state.selectedId); if(!focus) return;
+    if(selectionEl) selectionEl.remove(); selectionEl=null; const l=layerById(state.selectedId); if(!l) return;
     const el=document.createElement('div'); el.className='selection';
-    el.style.left=focus.x+'px'; el.style.top=focus.y+'px'; el.style.width=focus.w+'px'; el.style.height=focus.h+'px'; el.style.transform=`rotate(\${focus.rot}deg)`; el.style.zIndex='9999';
+    el.style.left=l.x+'px'; el.style.top=l.y+'px'; el.style.width=l.w+'px'; el.style.height=l.h+'px'; el.style.transform=`rotate(${l.rot}deg)`;
     const mk=(c)=>{ const h=document.createElement('div'); h.className='handle '+c; el.appendChild(h); }
     mk('tl'); mk('tr'); mk('bl'); mk('br'); mk('rot');
     $('#stage').appendChild(el); selectionEl=el;
@@ -492,7 +516,8 @@
   }
 
   $('#stage').addEventListener('pointerdown', (e)=>{
-    const target=e.target; if(target.classList.contains('handle')){
+    const target=e.target;
+    if(target.classList.contains('handle')){
       const l=layerById(state.selectedId); if(!l) return; start={x:e.clientX,y:e.clientY,l:{...l}};
       if(target.classList.contains('rot')) dragMode='rot';
       else if(target.classList.contains('tl')) dragMode='tl';
@@ -500,39 +525,50 @@
       else if(target.classList.contains('bl')) dragMode='bl';
       else if(target.classList.contains('br')) dragMode='br';
       window.addEventListener('pointermove', onPointerMove); window.addEventListener('pointerup', onPointerUp);
+    } else if(target.id==='stage'){
+      // lasso marquee selection
+      dragMode='marquee'; start={x:e.clientX,y:e.clientY}; createMarquee(start.x, start.y);
+      window.addEventListener('pointermove', onPointerMove); window.addEventListener('pointerup', onPointerUp);
     }
   })
 
   function onPointerMove(e){
-    const l=layerById(state.selectedId); if(!l || !dragMode) return;
+    const l=layerById(state.selectedId);
     const rect=$('#stage').getBoundingClientRect();
     const dx=e.clientX-start.x, dy=e.clientY-start.y; const keepRatio = e.shiftKey;
     if(dragMode==='move'){
-      l.x = start.l.x + dx; l.y = start.l.y + dy;
+      if(!l) return; l.x = start.l.x + dx; l.y = start.l.y + dy; if(state.snapping) applySnapping(l); positionLayerDom(l); drawSelection(); drawSmartGuides(l);
     } else if(dragMode==='rot'){
-      const cx=l.x + l.w/2, cy=l.y + l.h/2; const a=Math.atan2((e.clientY - rect.top) - cy, (e.clientX - rect.left) - cx);
-      l.rot = Math.round(a * 180/Math.PI);
-    } else {
-      const orig = {...start.l};
+      if(!l) return; const cx=l.x + l.w/2, cy=l.y + l.h/2; const a=Math.atan2((e.clientY - rect.top) - cy, (e.clientX - rect.left) - cx); l.rot = Math.round(a * 180/Math.PI); positionLayerDom(l); drawSelection();
+    } else if(dragMode==='tl' || dragMode==='tr' || dragMode==='bl' || dragMode==='br'){
+      if(!l) return; const orig = {...start.l};
       if(dragMode==='tl'){ l.x=orig.x+dx; l.y=orig.y+dy; l.w=orig.w-dx; l.h=orig.h-dy; }
       if(dragMode==='tr'){ l.y=orig.y+dy; l.w=orig.w+dx; l.h=orig.h-dy; }
       if(dragMode==='bl'){ l.x=orig.x+dx; l.w=orig.w-dx; l.h=orig.h+dy; }
       if(dragMode==='br'){ l.w=orig.w+dx; l.h=orig.h+dy; }
       if(keepRatio){ const r = orig.w/orig.h; l.h = Math.sign(l.h)*Math.abs(l.w / r); }
       l.w=Math.max(12,l.w); l.h=Math.max(12,l.h);
+      if(state.snapping) applySnapping(l); positionLayerDom(l); drawSelection();
+    } else if(dragMode==='marquee'){
+      updateMarquee(e.clientX, e.clientY);
+      const sel = layersInMarquee();
+      state.selectedIds = sel.map(s=>s.id);
+      state.selectedId = state.selectedIds[state.selectedIds.length-1] || null;
+      refreshLayersList(); drawSelection();
     }
-    if(state.snapping) applySnapping(l);
-    positionLayerDom(l); drawSelection();
   }
-  function onPointerUp(){ dragMode=null; saveAuto(); window.removeEventListener('pointermove', onPointerMove); window.removeEventListener('pointerup', onPointerUp) }
+  function onPointerUp(){ dragMode=null; removeMarquee(); clearSmartGuides(); saveAuto(); window.removeEventListener('pointermove', onPointerMove); window.removeEventListener('pointerup', onPointerUp) }
 
   // Snapping helpers
   function applySnapping(l){
     const step=10; // grid
+    // snap to grid
     l.x = snap(l.x, step); l.y = snap(l.y, step);
+    // snap to center lines
     const cx = l.x + l.w/2; const cy = l.y + l.h/2; const stageCx = state.stage.w/2; const stageCy = state.stage.h/2; const tol=6;
     if(Math.abs(cx - stageCx) < tol) l.x += (stageCx - cx);
     if(Math.abs(cy - stageCy) < tol) l.y += (stageCy - cy);
+    // optional: confine to safe area
     if(state.confineSafe){
       const left = SAFE_PX, top = SAFE_PX, right = state.stage.w - SAFE_PX, bottom = state.stage.h - SAFE_PX;
       l.x = clamp(l.x, left, Math.max(left, right - l.w));
@@ -543,31 +579,35 @@
   }
 
   // Actions
-  $('#btnNew').onclick=()=>{ if(confirm('¿Vaciar el lienzo?')){ state.layers=[]; state.bgImage=null; state.selectedIds=[]; state.selectedId=null; renderBackground(); refreshAll(); saveAuto(); }}
-  $('#btnDeleteLayer').onclick=()=>{ const ids=state.selectedIds.length? state.selectedIds : (state.selectedId? [state.selectedId]: []); if(!ids.length) return; ids.forEach(id=>{ const idx=state.layers.findIndex(l=>l.id===id); if(idx>=0) state.layers.splice(idx,1); }); state.selectedIds=[]; state.selectedId=null; refreshAll(); saveAuto(); }
+  $('#btnNew').onclick=()=>{ if(confirm('¿Vaciar el lienzo?')){ state.layers=[]; state.bgImage=null; renderBackground(); refreshAll(); saveAuto(); }}
+  $('#btnDeleteLayer').onclick=()=>{ const ids=state.selectedIds?.length? state.selectedIds : (state.selectedId? [state.selectedId]: []); if(!ids.length) return; ids.forEach(id=>{ const idx=state.layers.findIndex(l=>l.id===id); if(idx>=0) state.layers.splice(idx,1); }); state.selectedIds=[]; state.selectedId=null; refreshAll(); saveAuto(); }
 
   function moveLayer(id, dir){ // dir: +1 forward, -1 backward
     const i=state.layers.findIndex(l=>l.id===id); if(i<0) return; const j=i+dir; if(j<0||j>=state.layers.length) return; const tmp=state.layers[i]; state.layers[i]=state.layers[j]; state.layers[j]=tmp; refreshAll(); saveAuto(); }
 
-  function alignSelected(which){
-    const ids = state.selectedIds.length? state.selectedIds : (state.selectedId? [state.selectedId]: []);
-    const W=state.stage.w, H=state.stage.h; const left=SAFE_PX, top=SAFE_PX, right=W-SAFE_PX, bottom=H-SAFE_PX;
-    ids.forEach(id=>{ const l=layerById(id); if(!l) return;
-      if(which==='left')   l.x=left;
-      if(which==='centerX') l.x=(W - l.w)/2;
-      if(which==='right')  l.x=right - l.w;
-      if(which==='top')    l.y=top;
-      if(which==='centerY') l.y=(H - l.h)/2;
-      if(which==='bottom') l.y=bottom - l.h;
-      positionLayerDom(l);
-    });
-    drawSelection(); saveAuto();
+  function alignSelected(which){ 
+    const ids = state.selectedIds?.length? state.selectedIds : (state.selectedId? [state.selectedId]: []); 
+    const W=state.stage.w, H=state.stage.h; 
+    const left=SAFE_PX, top=SAFE_PX, right=W-SAFE_PX, bottom=H-SAFE_PX; 
+    ids.forEach(id=>{ 
+      const l=layerById(id); 
+      if(!l) return; 
+      if(which==='left')   l.x=left; 
+      if(which==='centerX') l.x=(W - l.w)/2; 
+      if(which==='right')  l.x=right - l.w; 
+      if(which==='top')    l.y=top; 
+      if(which==='centerY') l.y=(H - l.h)/2; 
+      if(which==='bottom') l.y=bottom - l.h; 
+      positionLayerDom(l); 
+    }); 
+    drawSelection(); 
+    saveAuto(); 
   }
 
   function distributeLayers(axis){
     const ids = state.selectedIds.length>=3? state.selectedIds : state.layers.filter(l=>!l.locked).map(l=>l.id);
     const items = ids.map(layerById).filter(Boolean);
-    if(items.length < 3) return;
+    if(items.length < 3) return; // need at least 3 to distribute
     const left=SAFE_PX, top=SAFE_PX, right=state.stage.w - SAFE_PX, bottom=state.stage.h - SAFE_PX;
     if(axis==='H'){
       const totalW = items.reduce((s,l)=>s+l.w,0);
@@ -583,11 +623,26 @@
     state.layers.forEach(positionLayerDom); drawSelection(); saveAuto();
   }
 
-  function equalizeWH(){ const ref=layerById(state.selectedId); if(!ref) return; (state.selectedIds.length? state.selectedIds : state.layers.map(l=>l.id)).forEach(id=>{ const l=layerById(id); if(l && l.id!==ref.id && !l.locked){ l.w=ref.w; l.h=ref.h; positionLayerDom(l);} }); drawSelection(); saveAuto(); }
+  function equalizeWH(){ 
+    const ref=layerById(state.selectedId); 
+    if(!ref) return; 
+    (state.selectedIds.length? state.selectedIds : state.layers.map(l=>l.id)).forEach(id=>{ 
+      const l=layerById(id); 
+      if(l && l.id!==ref.id && !l.locked){ 
+        l.w=ref.w; 
+        l.h=ref.h; 
+        positionLayerDom(l);
+      } 
+    }); 
+    drawSelection(); 
+    saveAuto(); 
+  }
 
   function refreshAll(){
+    // Redibuja DOM de capas y overlays
     $$('.layer', $('#stage')).forEach(el=>el.remove());
-    state.layers.forEach(drawLayerDom); refreshLayersList(); drawSelection(); renderBackground(); updateCamera(); updatePropsPanel(); drawGuides();
+    state.layers.forEach(drawLayerDom);
+    refreshLayersList(); drawSelection(); renderBackground(); updateCamera(); updatePropsPanel(); drawGuides();
   }
 
   // Export PNG (render our own canvas with camera punch-out)
@@ -601,7 +656,7 @@
         if(l.type==='image'){
           await drawImg(ctx, l.dataUrl, -l.w/2, -l.h/2, l.w, l.h, 0);
         } else {
-          ctx.fillStyle=l.color||'#fff'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font=`\${l.size||32}px \${l.font||'Inter'}`; wrapText(ctx, l.text||'', 0,0, l.w*.9, l.size*1.2);
+          ctx.fillStyle=l.color||'#fff'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font=`${l.size||32}px ${l.font||'Inter'}`; wrapText(ctx, l.text||'', 0,0, l.w*.9, l.size*1.2);
         }
         ctx.restore();
       }
@@ -627,13 +682,15 @@
   const LS_SESSION_KEY='cc_session';
   const LS_LAST_KEY='cc_last_design';
 
-  function saveAuto(){ localStorage.setItem(LS_LAST_KEY, JSON.stringify({ ...state, selectedId:null })); }
-  $('#btnSave').onclick=()=>{ if(!state.user){ toast('Inicia sesión para guardar en tu cuenta'); return }
+  function saveAuto(){ localStorage.setItem(LS_LAST_KEY, JSON.stringify({ ...state, selectedId:null })); pushHistory(); }
+  $('#btnSave').onclick=()=>{ 
+    if(!state.user){ toast('Inicia sesión para guardar en tu cuenta'); return }
     const key='cc_user_'+state.user.email; const arr=JSON.parse(localStorage.getItem(key)||'[]');
     const item={ id: Date.now(), name: (layerById(state.selectedId)?.name)||'Diseño', snapshot: null, project: { ...state, selectedId:null } };
-    arr.push(item); localStorage.setItem(key, JSON.stringify(arr)); toast('Diseño guardado en tu cuenta'); }
+    arr.push(item); localStorage.setItem(key, JSON.stringify(arr)); toast('Diseño guardado en tu cuenta'); 
+  }
 
-  $('#btnLoadLast').onclick=()=>{ const raw=localStorage.getItem(LS_LAST_KEY); if(!raw){ toast('No hay diseño previo'); return } const proj=JSON.parse(raw); Object.assign(state, { model:proj.model, bgImage:proj.bgImage, layers:proj.layers, stage:proj.stage, snapping: proj.snapping ?? true, confineSafe: proj.confineSafe ?? true }); setStageSize(state.stage.w, state.stage.h); renderBackground(); buildPhoneButtons(); refreshAll(); scrollToEditor(); toast('Proyecto cargado'); }
+  $('#btnLoadLast').onclick=()=>{ const raw=localStorage.getItem(LS_LAST_KEY); if(!raw){ toast('No hay diseño previo'); return } const proj=JSON.parse(raw); Object.assign(state, { model:proj.model, bgImage:proj.bgImage, layers:proj.layers, stage:proj.stage, snapping: proj.snapping ?? true }); setStageSize(state.stage.w, state.stage.h); renderBackground(); buildPhoneButtons(); refreshAll(); scrollToEditor(); toast('Proyecto cargado'); }
 
   // Auth (LocalStorage users)
   const authDlg=$('#authDlg');
@@ -641,19 +698,94 @@
   $('#doSignIn').onclick=(e)=>{ e.preventDefault(); const email=$('#authEmail').value.trim(); const pass=$('#authPass').value; const users=JSON.parse(localStorage.getItem(LS_USERS_KEY)||'[]'); const u=users.find(u=>u.email===email && u.pass===pass); if(!u){ alert('Usuario no encontrado'); return } state.user=u; localStorage.setItem(LS_SESSION_KEY, JSON.stringify(u)); authDlg.close(); toast('Sesión iniciada'); }
   $('#doSignUp').onclick=(e)=>{ e.preventDefault(); const email=$('#authEmail').value.trim(); const pass=$('#authPass').value; const users=JSON.parse(localStorage.getItem(LS_USERS_KEY)||'[]'); if(users.some(u=>u.email===email)){ alert('Ya existe una cuenta con ese email'); return } users.push({email, pass}); localStorage.setItem(LS_USERS_KEY, JSON.stringify(users)); alert('Cuenta creada. Ahora inicia sesión.'); }
 
+  // --- Marquee helpers ---
+  function createMarquee(x,y){ 
+    const rect = $('#stage').getBoundingClientRect();
+    marqueeEl=document.createElement('div'); 
+    marqueeEl.style.position='absolute'; 
+    marqueeEl.style.left=(x-rect.left)+'px'; 
+    marqueeEl.style.top=(y-rect.top)+'px'; 
+    marqueeEl.style.width='0px'; 
+    marqueeEl.style.height='0px'; 
+    marqueeEl.style.border='1px dashed rgba(255,255,255,.6)'; 
+    marqueeEl.style.background='rgba(124,58,237,.15)'; 
+    marqueeEl.style.pointerEvents='none'; 
+    marqueeEl.style.zIndex='9998'; 
+    $('#stage').appendChild(marqueeEl); 
+  }
+  
+  function updateMarquee(mx,my){ 
+    if(!marqueeEl) return; 
+    const st=$('#stage').getBoundingClientRect(); 
+    const x0=parseFloat(marqueeEl.style.left), y0=parseFloat(marqueeEl.style.top); 
+    const x1=mx-st.left, y1=my-st.top; 
+    const left=Math.min(x0,x1), top=Math.min(y0,y1), w=Math.abs(x1-x0), h=Math.abs(y1-y0); 
+    marqueeEl.style.left=left+'px'; 
+    marqueeEl.style.top=top+'px'; 
+    marqueeEl.style.width=w+'px'; 
+    marqueeEl.style.height=h+'px'; 
+  }
+  
+  function removeMarquee(){ if(marqueeEl){ marqueeEl.remove(); marqueeEl=null; } }
+  
+  function layersInMarquee(){ 
+    if(!marqueeEl) return []; 
+    const rx=parseFloat(marqueeEl.style.left), ry=parseFloat(marqueeEl.style.top), rw=parseFloat(marqueeEl.style.width), rh=parseFloat(marqueeEl.style.height); 
+    const rect={x:rx,y:ry,w:rw,h:rh}; 
+    return state.layers.filter(l=>{ 
+      const lx=l.x, ly=l.y, lw=l.w, lh=l.h; 
+      return lx<rect.x+rect.w && lx+lw>rect.x && ly<rect.y+rect.h && ly+lh>rect.y; 
+    }); 
+  }
+
+  // --- Smart guides ---
+  function drawSmartGuides(l){ 
+    const g=$('#smartGuides'); 
+    if(!g) return; 
+    const w=state.stage.w, h=state.stage.h; 
+    const cx=w/2, cy=h/2; 
+    const lines=[]; 
+    const tol=6; 
+    const lc=l.x, rc=l.x+l.w, tc=l.y, bc=l.y+l.h, mcx=l.x+l.w/2, mcy=l.y+l.h/2; 
+    if(Math.abs(mcx-cx)<tol) lines.push({x1:cx,y1:0,x2:cx,y2:h}); 
+    if(Math.abs(mcy-cy)<tol) lines.push({x1:0,y1:cy,x2:w,y2:cy}); 
+    state.layers.forEach(o=>{ 
+      if(o.id===l.id) return; 
+      const ocx=o.x+o.w/2, ocy=o.y+o.h/2, ol=o.x, or=o.x+o.w, ot=o.y, ob=o.y+o.h; 
+      if(Math.abs(mcx-ocx)<tol) lines.push({x1:ocx,y1:0,x2:ocx,y2:h}); 
+      if(Math.abs(mcy-ocy)<tol) lines.push({x1:0,y1:ocy,x2:w,y2:ocy}); 
+      if(Math.abs(lc-ol)<tol) lines.push({x1:ol,y1:0,x2:ol,y2:h}); 
+      if(Math.abs(rc-or)<tol) lines.push({x1:or,y1:0,x2:or,y2:h}); 
+      if(Math.abs(tc-ot)<tol) lines.push({x1:0,y1:ot,x2:w,y2:ot}); 
+      if(Math.abs(bc-ob)<tol) lines.push({x1:0,y1:ob,x2:w,y2:ob}); 
+    }); 
+    const svg=[`<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}' viewBox='0 0 ${w} ${h}'>`]; 
+    lines.forEach(li=>{ svg.push(`<line x1='${li.x1}' y1='${li.y1}' x2='${li.x2}' y2='${li.y2}' stroke='${'rgba(6,182,212,.8)'}' stroke-width='1.5'/>`) }); 
+    svg.push('</svg>'); 
+    g.innerHTML=svg.join(''); 
+  }
+  
+  function clearSmartGuides(){ const g=$('#smartGuides'); if(g) g.innerHTML=''; }
+
   // Boot
   (function init(){
     buildPhoneButtons(); setStageSize(state.stage.w, state.stage.h); renderBackground(); updateCamera();
     const uRaw=localStorage.getItem(LS_SESSION_KEY); if(uRaw){ try{ state.user=JSON.parse(uRaw) }catch{} }
-    refreshAll();
+    refreshAll(); pushHistory();
+    // toggles
     const tSnap=$('#toggleSnap'); if(tSnap){ tSnap.checked = state.snapping; tSnap.addEventListener('change', (e)=>{ state.snapping=e.target.checked; saveAuto(); toast(state.snapping? 'Snap activado':'Snap desactivado'); }) }
     const tConf=$('#toggleConfine'); if(tConf){ tConf.checked = state.confineSafe; tConf.addEventListener('change', (e)=>{ state.confineSafe=e.target.checked; saveAuto(); toast(state.confineSafe? 'Dentro de área segura':'Sin límites'); }) }
+    // align buttons
     const map={ alLeft:'left', alCenterX:'centerX', alRight:'right', alTop:'top', alCenterY:'centerY', alBottom:'bottom' };
     Object.entries(map).forEach(([id, w])=>{ const b=$('#'+id); if(b) b.addEventListener('click', ()=>alignSelected(w)); });
     $('#distH')?.addEventListener('click', ()=>distributeLayers('H'));
     $('#distV')?.addEventListener('click', ()=>distributeLayers('V'));
     $('#equalWH')?.addEventListener('click', equalizeWH);
+    // undo/redo buttons & shortcuts
+    $('#btnUndo')?.addEventListener('click', undo);
+    $('#btnRedo')?.addEventListener('click', redo);
+    document.addEventListener('keydown', (e)=>{ if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z'){ e.preventDefault(); if(e.shiftKey) redo(); else undo(); } if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='y'){ e.preventDefault(); redo(); } });
   })();
-  </script>
+</script>
 </body>
 </html>
