@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CaseCustomizer • Demo HTML</title>
+  <style>
+    :root{
+      --primary: hsl(260, 100%, 65%);
+      --accent: hsl(180, 100%, 60%);
+      --bg: hsl(240, 20%, 6%);
+      --card: hsl(240, 14%, 12%);
+      --muted: hsl(240, 9%, 60%);
+      --ring: hsla(180, 100%, 60%, .55);
+      --radius: 16px;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --shadow-2: 0 6px 16px rgba(0,0,0,.25);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, "Noto Sans", "Helvetica Neue", Arial, "Apple Color Emoji","Segoe UI Emoji";
+      color:#eef2ff; background:
+        radial-gradient(1200px 800px at 10% -20%, hsla(260,100%,65%,.25), transparent 60%),
+        radial-gradient(900px 700px at 110% 20%, hsla(180,100%,60%,.18), transparent 65%),
+        linear-gradient(180deg, hsl(240,25%,8%), hsl(240,18%,9%));
+    }
+    a{color:var(--accent)}
+    .container{max-width:1200px; margin:0 auto; padding:24px}
+    header.nav{
+      position:sticky; top:0; backdrop-filter: blur(10px);
+      background: linear-gradient(90deg, color-mix(in srgb, var(--primary) 22%, transparent), color-mix(in srgb, var(--accent) 22%, rgba(8,10,24,.6)));
+      border-bottom:1px solid rgba(255,255,255,.06);
+      z-index:50;
+    }
+    .nav-inner{display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 24px}
+    .brand{display:flex; align-items:center; gap:12px; font-weight:800; letter-spacing:.2px}
+    .brand .logo{width:34px; height:34px; border-radius:12px; background:
+      conic-gradient(from 140deg, var(--primary), var(--accent)); box-shadow:0 0 0 2px rgba(255,255,255,.1) inset}
+    .pill{padding:10px 14px; border-radius:999px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.08)}
+    .btn{cursor:pointer; border:none; padding:12px 16px; border-radius:12px; font-weight:700; letter-spacing:.2px; color:#0b1020;
+      background: linear-gradient(135deg, var(--accent), var(--primary)); box-shadow: var(--shadow)}
+    .btn.ghost{background:transparent; color:#f1f5ff; border:1px solid rgba(255,255,255,.15)}
+    .btn:active{transform:translateY(1px)}
+
+    /* HERO */
+    .hero{display:grid; grid-template-columns: 1.1fr .9fr; gap:32px; align-items:center; padding:48px 24px 20px}
+    .hero h1{font-size: clamp(28px, 3.8vw, 48px); margin:0 0 12px; line-height:1.05}
+    .hero p{opacity:.85; margin:0 0 22px}
+    .glass{background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03)); border:1px solid rgba(255,255,255,.10); border-radius: var(--radius); box-shadow: var(--shadow);}
+    .hero-card{padding:22px}
+    .hero-badges{display:flex; gap:10px; flex-wrap:wrap; margin:12px 0 18px}
+
+    /* EDITOR LAYOUT */
+    .editor-shell{margin-top:32px; display:grid; grid-template-columns: 260px 1fr 280px; gap:18px; align-items:start}
+    .panel{padding:14px; border-radius: var(--radius); background: var(--card); box-shadow: var(--shadow-2); border:1px solid rgba(255,255,255,.06)}
+    .panel h3{margin:6px 0 12px; font-size:14px; letter-spacing:.6px; text-transform:uppercase; color:var(--muted)}
+
+    /* STAGE */
+    .stage-wrap{display:flex; align-items:center; justify-content:center; height:700px; background: radial-gradient(600px 300px at 50% -30%, rgba(130,150,255,.08), transparent), linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02)); border:1px dashed rgba(255,255,255,.08); border-radius:20px; position:relative}
+    .stage{position:relative; width:360px; height:720px; border-radius:28px; background:#111; box-shadow: 0 16px 40px rgba(0,0,0,.4), inset 0 0 0 2px rgba(255,255,255,.06)}
+    .case-overlay{pointer-events:none; position:absolute; inset:0; border-radius:28px;}
+    .camera{position:absolute; width:92px; height:92px; right:22px; top:20px; background:radial-gradient(circle at 35% 35%, #1b1d2c 0 42%, transparent 42%),
+        radial-gradient(circle at 70% 70%, #1b1d2c 0 40%, transparent 40%),
+        radial-gradient(circle at 30% 75%, #1b1d2c 0 38%, transparent 38%),
+        radial-gradient(circle at 70% 30%, #1b1d2c 0 36%, transparent 36%);
+      border-radius:22px; outline: 2px solid rgba(255,255,255,.06); filter: drop-shadow(0 6px 18px rgba(0,0,0,.5)); opacity:.9}
+    .mic{position:absolute; width:28px; height:28px; left:50%; top:10px; transform:translateX(-50%); background:#0e1224; border-radius:999px; box-shadow:inset 0 0 0 3px rgba(255,255,255,.06)}
+
+    /* LAYERS */
+    .layer{position:absolute; user-select:none; transform-origin:center center}
+    .layer img{display:block; max-width:none}
+    .text-layer{padding:6px 10px; font-weight:800; letter-spacing:.4px; text-shadow: 0 2px 8px rgba(0,0,0,.35)}
+
+    /* Selection box */
+    .selection{position:absolute; border:1.5px dashed var(--accent); outline: 2px solid rgba(0,0,0,.25); box-shadow: 0 0 0 4px rgba(0,0,0,.18) inset; pointer-events:none}
+    .handle{position:absolute; width:14px; height:14px; border-radius:3px; background:var(--accent); outline:2px solid rgba(0,0,0,.5)}
+    .handle.tl{left:-7px; top:-7px}
+    .handle.tr{right:-7px; top:-7px}
+    .handle.bl{left:-7px; bottom:-7px}
+    .handle.br{right:-7px; bottom:-7px}
+    .handle.rot{left:50%; top:-36px; transform:translateX(-50%); width:12px; height:12px; border-radius:999px; background:var(--primary)}
+
+    .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+    .input, select{width:100%; padding:10px 12px; border-radius:10px; background:#0e1220; color:#e8ecff; border:1px solid rgba(255,255,255,.12)}
+    .input[type="range"]{padding:0}
+    .badge{background:rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.14); padding:6px 8px; border-radius:10px}
+    .grid{display:grid; gap:10px}
+    .grid.cols-2{grid-template-columns: repeat(2, minmax(0,1fr))}
+    .grid.cols-3{grid-template-columns: repeat(3, minmax(0,1fr))}
+    .phone-btn{padding:10px; border-radius:10px; background:#0c1020; border:1px solid rgba(255,255,255,.10); cursor:pointer; text-align:center}
+    .phone-btn.active{outline:2px solid var(--accent); background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02))}
+
+    .footerbar{display:flex; gap:10px; justify-content:space-between; align-items:center; margin-top:16px}
+    .status{opacity:.8; font-size:.94rem}
+    .hint{color:var(--muted); font-size:.9rem}
+
+    /* Auth modal */
+    dialog{border:none; border-radius:14px; padding:0; background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04)); color:#e9edff; box-shadow: var(--shadow); width:380px}
+    dialog::backdrop{background:rgba(5,7,14,.6); backdrop-filter: blur(2px)}
+    .modal{padding:18px}
+    .modal h2{margin:0 0 10px}
+
+    @media (max-width: 1000px){
+      .hero{grid-template-columns: 1fr;}
+      .editor-shell{grid-template-columns: 1fr;}
+      .stage-wrap{height: 640px}
+      .stage{transform: scale(.9)}
+    }
+  </style>
+</head>
+<body>
+  <header class="nav">
+    <div class="nav-inner container">
+      <div class="brand">
+        <div class="logo"></div>
+        CaseCustomizer <span class="pill">Demo</span>
+      </div>
+      <div class="row">
+        <button id="btnSignIn" class="btn ghost">Iniciar sesión</button>
+        <button id="btnStart" class="btn">Empieza ahora</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- HERO / LANDING -->
+    <section class="hero">
+      <div>
+        <h1>Personaliza tu <span style="background:linear-gradient(90deg,var(--accent),var(--primary)); -webkit-background-clip:text; background-clip:text; color:transparent">case de celular</span> con un editor visual al estilo Canva.</h1>
+        <p>Crea diseños únicos combinando imágenes y texto. Arrastra, redimensiona, rota y previsualiza en tiempo real sobre modelos populares (iPhone, Galaxy, Pixel). Guarda en tu cuenta (LocalStorage en este demo) y genera vistas previas para impresión.</p>
+        <div class="hero-badges">
+          <span class="badge">Drag & Resize</span>
+          <span class="badge">Fuentes y colores</span>
+          <span class="badge">Modelos predefinidos</span>
+          <span class="badge">Guardado local</span>
+        </div>
+        <div class="row">
+          <button class="btn" onclick="scrollToEditor()">Abrir Editor</button>
+          <button class="btn ghost" id="btnLoadLast">Cargar último diseño</button>
+        </div>
+      </div>
+      <div class="glass hero-card">
+        <img alt="preview" style="width:100%; border-radius:14px; aspect-ratio: 16/10; object-fit:cover; background: linear-gradient(135deg, rgba(124,58,237,.5), rgba(34,211,238,.45)), url('data:image/svg+xml;utf8,<?xml version=\'1.0\' ?><svg xmlns=\'http://www.w3.org/2000/svg\' width=\'1200\' height=\'800\'><defs><linearGradient id=\'g\' x1=\'0\' x2=\'1\'><stop offset=\'0%\' stop-color=\'%237c3aed\'/><stop offset=\'100%\' stop-color=\'%2306b6d4\'/></linearGradient></defs><rect width=\'100%\' height=\'100%\' fill=\'url(%23g)\'/><g fill=\'white\' opacity=\'.8\'><circle cx=\'280\' cy=\'280\' r=\'180\'/><rect x=\'640\' y=\'180\' width=\'340\' height=\'420\' rx=\'30\'/></g></svg>') center/cover; box-shadow: var(--shadow)"/>
+        <p class="hint" style="margin-top:8px">Imagen de ejemplo simulada. El editor real está abajo 👇</p>
+      </div>
+    </section>
+
+    <!-- EDITOR -->
+    <section id="editor" class="editor-shell">
+      <!-- LEFT: modelos + carga -->
+      <aside class="panel" id="leftPanel">
+        <h3>Modelos de teléfono</h3>
+        <div id="phoneList" class="grid cols-2" style="margin-bottom:12px"></div>
+        <div class="row" style="margin:10px 0 6px"><span class="hint">o sube foto de la parte trasera de tu cel</span></div>
+        <input id="phonePhoto" class="input" type="file" accept="image/*" />
+        <div class="footerbar">
+          <button class="btn ghost" id="btnClearPhone">Limpiar fondo</button>
+          <span class="hint">Stage: <span id="stageSizeInfo">360×720</span></span>
+        </div>
+        <hr style="margin:14px 0; border-color: rgba(255,255,255,.08)"/>
+        <h3>Capas</h3>
+        <div class="row">
+          <button id="btnAddImg" class="btn" style="flex:1">Añadir imagen</button>
+          <button id="btnAddText" class="btn ghost" style="flex:1">Añadir texto</button>
+        </div>
+        <input id="assetFile" type="file" accept="image/*" hidden />
+        <div id="layersList" style="margin-top:10px; display:grid; gap:8px"></div>
+      </aside>
+
+      <!-- CENTER: stage -->
+      <div class="panel stage-wrap">
+        <div id="stage" class="stage" aria-label="Canvas de diseño" tabindex="0">
+          <div class="mic"></div>
+          <div class="camera" id="cameraOverlay"></div>
+          <div id="overlayMask" class="case-overlay"></div>
+        </div>
+        <!-- selection box injected here -->
+      </div>
+
+      <!-- RIGHT: props + acciones -->
+      <aside class="panel" id="rightPanel">
+        <h3>Propiedades</h3>
+        <div class="grid">
+          <label>
+            <span class="hint">Capa seleccionada</span>
+            <input id="layerName" class="input" placeholder="Nombre visible en lista" />
+          </label>
+          <div class="grid cols-2">
+            <label> <span class="hint">X</span> <input id="propX" class="input" type="number" step="1"> </label>
+            <label> <span class="hint">Y</span> <input id="propY" class="input" type="number" step="1"> </label>
+            <label> <span class="hint">W</span> <input id="propW" class="input" type="number" step="1"> </label>
+            <label> <span class="hint">H</span> <input id="propH" class="input" type="number" step="1"> </label>
+          </div>
+          <label>
+            <span class="hint">Rotación (°)</span>
+            <input id="propR" class="input" type="range" min="-180" max="180" step="1" />
+          </label>
+
+          <div id="textProps" style="display:none" class="grid">
+            <label>
+              <span class="hint">Texto</span>
+              <input id="textValue" class="input" placeholder="Tu frase" />
+            </label>
+            <div class="grid cols-2">
+              <label>
+                <span class="hint">Fuente</span>
+                <select id="textFont" class="input">
+                  <option>Inter</option>
+                  <option>Arial</option>
+                  <option>Segoe UI</option>
+                  <option>Roboto</option>
+                  <option>Impact</option>
+                  <option>Georgia</option>
+                  <option>Courier New</option>
+                </select>
+              </label>
+              <label>
+                <span class="hint">Tamaño</span>
+                <input id="textSize" class="input" type="number" value="32" min="8" max="180" />
+              </label>
+            </div>
+            <label>
+              <span class="hint">Color</span>
+              <input id="textColor" class="input" type="color" value="#ffffff" />
+            </label>
+          </div>
+        </div>
+
+        <hr style="margin:14px 0; border-color: rgba(255,255,255,.08)"/>
+        <h3>Proyecto</h3>
+        <div class="grid cols-2">
+          <button id="btnSave" class="btn">Guardar</button>
+          <button id="btnExport" class="btn ghost">Exportar PNG</button>
+          <button id="btnNew" class="btn ghost">Nuevo</button>
+          <button id="btnDeleteLayer" class="btn ghost">Borrar capa</button>
+        </div>
+        <div class="footerbar">
+          <div class="status" id="status">Listo.</div>
+        </div>
+      </aside>
+    </section>
+
+    <p class="hint" style="margin:18px 8px 0">Consejo: usa el mouse para arrastrar. Mantén <kbd>Shift</kbd> mientras redimensionas para mantener proporción. Usa rueda del mouse sobre el deslizador para rotación fina.</p>
+  </main>
+
+  <!-- AUTH DIALOG (LocalStorage demo) -->
+  <dialog id="authDlg">
+    <form method="dialog" class="modal">
+      <h2>Tu cuenta (demo local)</h2>
+      <p class="hint">Este demo guarda usuarios y diseños en LocalStorage. No hay servidor.</p>
+      <label> <span class="hint">Email</span> <input id="authEmail" class="input" type="email" required placeholder="tu@email.com"/> </label>
+      <label> <span class="hint">Contraseña</span> <input id="authPass" class="input" type="password" required/> </label>
+      <div class="row" style="margin-top:12px">
+        <button id="doSignIn" class="btn" value="signin">Iniciar sesión</button>
+        <button id="doSignUp" class="btn ghost" value="signup">Crear cuenta</button>
+        <button class="btn ghost" value="cancel">Cancelar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script>
+  // --- Small helper utils ---
+  const $ = (sel, ctx=document)=>ctx.querySelector(sel);
+  const $$ = (sel, ctx=document)=>Array.from(ctx.querySelectorAll(sel));
+  const toast = (msg)=>{ const s=$('#status'); s.textContent=msg; setTimeout(()=>{ s.textContent=''; }, 3000)}
+
+  // --- Phone Models (simple presets with stage size & camera size/pos) ---
+  const PHONE_MODELS = [
+    { id:'iph15pro', name:'iPhone 15 Pro', w:360, h:720, cam:{x:360-22-92, y:20, w:92, h:92, r:22}},
+    { id:'gs25u', name:'Galaxy S25 Ultra', w:360, h:720, cam:{x:360-20-30, y:30, w:30, h:160, r:14}},
+    { id:'pix9pro', name:'Pixel 9 Pro', w:360, h:720, cam:{x:20, y:20, w:74, h:74, r:16}},
+  ];
+
+  // --- App State ---
+  const state = {
+    user: null,
+    model: PHONE_MODELS[0],
+    bgImage: null, // phone photo or model texture
+    layers: [], // {id,type:'image'|'text', name, x,y,w,h, rot, dataUrl? , text/font/size/color}
+    selectedId: null,
+    stage:{w:360, h:720}
+  };
+
+  // --- Init UI ---
+  function buildPhoneButtons(){
+    const list = $('#phoneList'); list.innerHTML='';
+    PHONE_MODELS.forEach(m=>{
+      const btn = document.createElement('button');
+      btn.className='phone-btn' + (state.model.id===m.id?' active':'');
+      btn.innerHTML = `<div style="font-weight:800">${m.name}</div><div class="hint">${m.w}×${m.h}</div>`;
+      btn.onclick=()=>{ state.model=m; setStageSize(m.w,m.h); updateCamera(); $$('.phone-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); saveAuto(); }
+      list.appendChild(btn);
+    })
+  }
+
+  function setStageSize(w,h){
+    state.stage.w=w; state.stage.h=h; const s=$('#stage'); s.style.width=w+'px'; s.style.height=h+'px'; $('#stageSizeInfo').textContent=`${w}×${h}`;
+    // reposition/scale layers proportionally? (simple keep values)
+  }
+
+  function updateCamera(){
+    const c=state.model.cam; const el=$('#cameraOverlay');
+    if(!c){ el.style.display='none'; return }
+    el.style.display='block'; el.style.left=c.x+'px'; el.style.top=c.y+'px'; el.style.width=c.w+'px'; el.style.height=c.h+'px'; el.style.borderRadius=c.r+'px';
+  }
+
+  function scrollToEditor(){
+    $('#editor').scrollIntoView({behavior:'smooth'});
+  }
+
+  // Phone photo upload
+  $('#phonePhoto').addEventListener('change', (e)=>{
+    const f=e.target.files?.[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ state.bgImage=r.result; renderBackground(); saveAuto(); }; r.readAsDataURL(f);
+  });
+  $('#btnClearPhone').onclick=()=>{ state.bgImage=null; renderBackground(); saveAuto(); }
+
+  function renderBackground(){
+    const st=$('#stage'); st.style.background = state.bgImage ? `#000 url(${state.bgImage}) center/cover no-repeat` : '#111';
+  }
+
+  // Layer management
+  let idSeq=1;
+  function addImageLayer(dataUrl){
+    const layer={ id:'L'+(idSeq++), type:'image', name:'Imagen '+idSeq, x:40, y:160, w:200, h:200, rot:0, dataUrl };
+    state.layers.push(layer); selectLayer(layer.id); drawLayerDom(layer); refreshLayersList(); saveAuto();
+  }
+  function addTextLayer(){
+    const layer={ id:'L'+(idSeq++), type:'text', name:'Texto '+idSeq, x:60, y:260, w:240, h:80, rot:0, text:'Tu frase', font:'Inter', size:32, color:'#ffffff' };
+    state.layers.push(layer); selectLayer(layer.id); drawLayerDom(layer); refreshLayersList(); saveAuto();
+  }
+
+  $('#btnAddImg').onclick=()=>$('#assetFile').click();
+  $('#assetFile').addEventListener('change', (e)=>{
+    const f=e.target.files?.[0]; if(!f) return; const r=new FileReader(); r.onload=()=> addImageLayer(r.result); r.readAsDataURL(f);
+  });
+  $('#btnAddText').onclick=addTextLayer;
+
+  function layerById(id){ return state.layers.find(l=>l.id===id) }
+
+  function drawLayerDom(layer){
+    let el = document.getElementById(layer.id);
+    if(!el){ el=document.createElement('div'); el.className='layer'; el.id=layer.id; $('#stage').appendChild(el); el.addEventListener('pointerdown', onLayerPointerDown) }
+    // content
+    el.innerHTML='';
+    if(layer.type==='image'){
+      const img = document.createElement('img'); img.src = layer.dataUrl; img.draggable=false; img.alt=''; el.appendChild(img);
+    }else{
+      const t = document.createElement('div'); t.className='text-layer'; t.textContent=layer.text; t.style.fontFamily=layer.font; t.style.fontSize=layer.size+'px'; t.style.color=layer.color; el.appendChild(t);
+    }
+    positionLayerDom(layer);
+  }
+
+  function positionLayerDom(layer){
+    const el = document.getElementById(layer.id); if(!el) return;
+    el.style.left=layer.x+'px'; el.style.top=layer.y+'px'; el.style.width=layer.w+'px'; el.style.height=layer.h+'px'; el.style.transform=`rotate(${layer.rot}deg)`;
+    if(layer.type==='image'){
+      const img=el.querySelector('img'); img.style.width='100%'; img.style.height='100%'; img.style.objectFit='contain';
+    } else {
+      const t=el.firstChild; t.style.width='100%'; t.style.height='100%'; displayTextAutosize(el, layer);
+    }
+  }
+
+  function displayTextAutosize(el, layer){
+    // keep text centered visually
+    el.style.display='flex'; el.style.alignItems='center'; el.style.justifyContent='center';
+  }
+
+  function refreshLayersList(){
+    const list=$('#layersList'); list.innerHTML='';
+    state.layers.slice().reverse().forEach(layer=>{
+      const row = document.createElement('button');
+      row.className='phone-btn'; row.style.textAlign='left'; row.innerHTML=`<strong>${layer.name}</strong> <span class="hint">(${layer.type})</span>`;
+      if(state.selectedId===layer.id) row.classList.add('active');
+      row.onclick=()=>selectLayer(layer.id);
+      list.appendChild(row);
+    })
+  }
+
+  function selectLayer(id){
+    state.selectedId=id; refreshLayersList(); updatePropsPanel(); drawSelection();
+  }
+
+  function updatePropsPanel(){
+    const l=layerById(state.selectedId);
+    $('#textProps').style.display = (l&&l.type==='text')? 'grid':'none';
+    $('#layerName').value = l? l.name: '';
+    if(!l) return;
+    $('#propX').value = Math.round(l.x); $('#propY').value=Math.round(l.y); $('#propW').value=Math.round(l.w); $('#propH').value=Math.round(l.h); $('#propR').value=l.rot;
+    if(l.type==='text'){
+      $('#textValue').value=l.text; $('#textFont').value=l.font; $('#textSize').value=l.size; $('#textColor').value=l.color;
+    }
+  }
+
+  // Props inputs -> update
+  $('#layerName').addEventListener('input', e=>{ const l=layerById(state.selectedId); if(!l) return; l.name=e.target.value; refreshLayersList(); saveAuto() })
+  ;['propX','propY','propW','propH','propR'].forEach(id=>{
+    $('#'+id).addEventListener('input', e=>{
+      const l=layerById(state.selectedId); if(!l) return; const v=parseFloat(e.target.value)||0; const key={propX:'x',propY:'y',propW:'w',propH:'h',propR:'rot'}[id]; l[key]=v; positionLayerDom(l); drawSelection(); saveAuto();
+    })
+  })
+  $('#textValue').addEventListener('input', e=>{ const l=layerById(state.selectedId); if(!l) return; l.text=e.target.value; drawLayerDom(l); saveAuto(); })
+  $('#textFont').addEventListener('change', e=>{ const l=layerById(state.selectedId); if(!l) return; l.font=e.target.value; drawLayerDom(l); saveAuto(); })
+  $('#textSize').addEventListener('input', e=>{ const l=layerById(state.selectedId); if(!l) return; l.size=parseInt(e.target.value)||12; drawLayerDom(l); saveAuto(); })
+  $('#textColor').addEventListener('input', e=>{ const l=layerById(state.selectedId); if(!l) return; l.color=e.target.value; drawLayerDom(l); saveAuto(); })
+
+  // Selection box & transform handles
+  let selectionEl=null, dragMode=null, start={x:0,y:0, l:null, mx:0,my:0};
+  function drawSelection(){
+    if(selectionEl) selectionEl.remove(); selectionEl=null; const l=layerById(state.selectedId); if(!l) return;
+    const el=document.createElement('div'); el.className='selection';
+    el.style.left=l.x+'px'; el.style.top=l.y+'px'; el.style.width=l.w+'px'; el.style.height=l.h+'px'; el.style.transform=`rotate(${l.rot}deg)`;
+    const mk=(c)=>{ const h=document.createElement('div'); h.className='handle '+c; el.appendChild(h); }
+    mk('tl'); mk('tr'); mk('bl'); mk('br'); mk('rot');
+    $('#stage').appendChild(el); selectionEl=el;
+  }
+
+  function onLayerPointerDown(e){
+    const id=e.currentTarget.id; selectLayer(id);
+    const l=layerById(id); if(!l) return; dragMode='move';
+    start={x:e.clientX, y:e.clientY, l: {...l}, mx:l.x, my:l.y};
+    window.addEventListener('pointermove', onPointerMove); window.addEventListener('pointerup', onPointerUp);
+  }
+
+  $('#stage').addEventListener('pointerdown', (e)=>{
+    const target=e.target; if(target.classList.contains('handle')){
+      const l=layerById(state.selectedId); if(!l) return; start={x:e.clientX,y:e.clientY,l:{...l}};
+      if(target.classList.contains('rot')) dragMode='rot';
+      else if(target.classList.contains('tl')) dragMode='tl';
+      else if(target.classList.contains('tr')) dragMode='tr';
+      else if(target.classList.contains('bl')) dragMode='bl';
+      else if(target.classList.contains('br')) dragMode='br';
+      window.addEventListener('pointermove', onPointerMove); window.addEventListener('pointerup', onPointerUp);
+    }
+  })
+
+  function onPointerMove(e){
+    const l=layerById(state.selectedId); if(!l || !dragMode) return;
+    const dx=e.clientX-start.x, dy=e.clientY-start.y; const keepRatio = e.shiftKey;
+    if(dragMode==='move'){
+      l.x = start.l.x + dx; l.y = start.l.y + dy;
+    } else if(dragMode==='rot'){
+      const cx=l.x + l.w/2, cy=l.y + l.h/2; const a=Math.atan2((e.clientY - $('#stage').getBoundingClientRect().top) - cy, (e.clientX - $('#stage').getBoundingClientRect().left) - cx);
+      l.rot = Math.round(a * 180/Math.PI);
+    } else {
+      // resize around corners (no rotation-aware for simplicity)
+      const orig = {...start.l};
+      if(dragMode==='tl'){ l.x=orig.x+dx; l.y=orig.y+dy; l.w=orig.w-dx; l.h=orig.h-dy; }
+      if(dragMode==='tr'){ l.y=orig.y+dy; l.w=orig.w+dx; l.h=orig.h-dy; }
+      if(dragMode==='bl'){ l.x=orig.x+dx; l.w=orig.w-dx; l.h=orig.h+dy; }
+      if(dragMode==='br'){ l.w=orig.w+dx; l.h=orig.h+dy; }
+      if(keepRatio){ const r = orig.w/orig.h; l.h = Math.sign(l.h)*Math.abs(l.w / r); }
+      l.w=Math.max(12,l.w); l.h=Math.max(12,l.h);
+    }
+    positionLayerDom(l); drawSelection();
+  }
+  function onPointerUp(){ dragMode=null; saveAuto(); window.removeEventListener('pointermove', onPointerMove); window.removeEventListener('pointerup', onPointerUp) }
+
+  // Actions
+  $('#btnNew').onclick=()=>{ if(confirm('¿Vaciar el lienzo?')){ state.layers=[]; state.bgImage=null; renderBackground(); refreshAll(); saveAuto(); }}
+  $('#btnDeleteLayer').onclick=()=>{ if(!state.selectedId) return; const idx=state.layers.findIndex(l=>l.id===state.selectedId); if(idx>=0){ state.layers.splice(idx,1); state.selectedId=null; const el=$('#'+state.selectedId); if(el) el.remove(); refreshAll(); saveAuto(); }}
+
+  function refreshAll(){
+    // clear stage layers
+    $$('.layer', $('#stage')).forEach(el=>el.remove());
+    state.layers.forEach(drawLayerDom); refreshLayersList(); drawSelection(); renderBackground(); updateCamera(); updatePropsPanel();
+  }
+
+  // Export PNG (render our own canvas)
+  $('#btnExport').onclick=()=>{
+    const canvas = document.createElement('canvas'); canvas.width=state.stage.w; canvas.height=state.stage.h; const ctx=canvas.getContext('2d');
+    // bg
+    if(state.bgImage){ const img=new Image(); img.onload=()=>{ ctx.drawImage(img,0,0,canvas.width,canvas.height); drawLayers(ctx); finish(); }; img.src=state.bgImage; }
+    else { ctx.fillStyle='#111'; ctx.fillRect(0,0,canvas.width,canvas.height); drawLayers(ctx); finish(); }
+    function drawLayers(ctx){
+      for(const l of state.layers){ ctx.save(); ctx.translate(l.x + l.w/2, l.y + l.h/2); ctx.rotate(l.rot*Math.PI/180); if(l.type==='image'){ const img=new Image(); img.src=l.dataUrl; // synchronous draw when loaded? we simplify using drawImage onload queued
+          // To ensure all images load before export, we chain draws
+        }
+      }
+    }
+    // Robust export ensuring images load sequentially
+    (async function renderSeq(){
+      const ctx=canvas.getContext('2d');
+      // bg
+      if(state.bgImage){ await drawImg(ctx, state.bgImage, 0,0, canvas.width, canvas.height, 0); } else { ctx.fillStyle='#111'; ctx.fillRect(0,0,canvas.width,canvas.height); }
+      for(const l of state.layers){ ctx.save(); ctx.translate(l.x + l.w/2, l.y + l.h/2); ctx.rotate(l.rot*Math.PI/180);
+        if(l.type==='image'){
+          await drawImg(ctx, l.dataUrl, -l.w/2, -l.h/2, l.w, l.h, 0);
+        } else {
+          ctx.fillStyle=l.color||'#fff'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font=`${l.size||32}px ${l.font||'Inter'}`; wrapText(ctx, l.text||'', 0,0, l.w*.9, l.size*1.2);
+        }
+        ctx.restore();
+      }
+      finish();
+    })();
+
+    function drawImg(ctx, src, x,y,w,h, r){ return new Promise(res=>{ const img=new Image(); img.onload=()=>{ ctx.drawImage(img,x,y,w,h); res(); }; img.src=src; }) }
+    function wrapText(ctx, text, x, y, maxWidth, lineHeight){
+      const words=(text||'').split(' '); let line=''; let yy=y; for(let n=0;n<words.length;n++){ const test=line+words[n]+' '; const m=ctx.measureText(test).width; if(m>maxWidth && n>0){ ctx.fillText(line, x, yy); line=words[n]+' '; yy+=lineHeight; } else { line=test; } } ctx.fillText(line, x, yy);
+    }
+    function finish(){ const url=canvas.toDataURL('image/png'); const a=document.createElement('a'); a.download='case-design.png'; a.href=url; a.click(); toast('PNG exportado'); }
+  }
+
+  // Save / Load (LocalStorage)
+  const LS_USERS_KEY='cc_users';
+  const LS_SESSION_KEY='cc_session';
+  const LS_LAST_KEY='cc_last_design';
+
+  function saveAuto(){ localStorage.setItem(LS_LAST_KEY, JSON.stringify({ ...state, selectedId:null })); }
+  $('#btnSave').onclick=()=>{ if(!state.user){ toast('Inicia sesión para guardar en tu cuenta'); return }
+    const key='cc_user_'+state.user.email; const arr=JSON.parse(localStorage.getItem(key)||'[]');
+    const item={ id: Date.now(), name: (layerById(state.selectedId)?.name)||'Diseño', snapshot: null, project: { ...state, selectedId:null } };
+    arr.push(item); localStorage.setItem(key, JSON.stringify(arr)); toast('Diseño guardado en tu cuenta'); }
+
+  $('#btnLoadLast').onclick=()=>{ const raw=localStorage.getItem(LS_LAST_KEY); if(!raw){ toast('No hay diseño previo'); return } const proj=JSON.parse(raw); Object.assign(state, { model:proj.model, bgImage:proj.bgImage, layers:proj.layers, stage:proj.stage }); setStageSize(state.stage.w, state.stage.h); renderBackground(); buildPhoneButtons(); refreshAll(); scrollToEditor(); toast('Proyecto cargado'); }
+
+  // Auth (LocalStorage users)
+  const authDlg=$('#authDlg');
+  $('#btnSignIn').onclick=()=>authDlg.showModal();
+  $('#doSignIn').onclick=(e)=>{ e.preventDefault(); const email=$('#authEmail').value.trim(); const pass=$('#authPass').value; const users=JSON.parse(localStorage.getItem(LS_USERS_KEY)||'[]'); const u=users.find(u=>u.email===email && u.pass===pass); if(!u){ alert('Usuario no encontrado'); return } state.user=u; localStorage.setItem(LS_SESSION_KEY, JSON.stringify(u)); authDlg.close(); toast('Sesión iniciada'); }
+  $('#doSignUp').onclick=(e)=>{ e.preventDefault(); const email=$('#authEmail').value.trim(); const pass=$('#authPass').value; const users=JSON.parse(localStorage.getItem(LS_USERS_KEY)||'[]'); if(users.some(u=>u.email===email)){ alert('Ya existe una cuenta con ese email'); return } users.push({email, pass}); localStorage.setItem(LS_USERS_KEY, JSON.stringify(users)); alert('Cuenta creada. Ahora inicia sesión.'); }
+
+  // Boot
+  (function init(){
+    buildPhoneButtons(); setStageSize(state.stage.w, state.stage.h); renderBackground(); updateCamera();
+    // restore session
+    const uRaw=localStorage.getItem(LS_SESSION_KEY); if(uRaw){ try{ state.user=JSON.parse(uRaw) }catch{} }
+    refreshAll();
+  })();
+  </script>
+</body>
+</html>
