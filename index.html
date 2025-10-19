@@ -537,7 +537,7 @@
     const rect=$('#stage').getBoundingClientRect();
     const dx=e.clientX-start.x, dy=e.clientY-start.y; const keepRatio = e.shiftKey;
     if(dragMode==='move'){
-      if(!l) return; l.x = start.l.x + dx; l.y = start.l.y + dy; if(state.snapping) applySnapping(l); positionLayerDom(l); drawSelection(); drawSmartGuides(l);
+      if(!l) return; l.x = start.l.x + dx; l.y = start.l.y + dy; if(state.snapping) applySnapping(l, e.altKey); positionLayerDom(l); drawSelection(); drawSmartGuides(l);
     } else if(dragMode==='rot'){
       if(!l) return; const cx=l.x + l.w/2, cy=l.y + l.h/2; const a=Math.atan2((e.clientY - rect.top) - cy, (e.clientX - rect.left) - cx); l.rot = Math.round(a * 180/Math.PI); positionLayerDom(l); drawSelection();
     } else if(dragMode==='tl' || dragMode==='tr' || dragMode==='bl' || dragMode==='br'){
@@ -548,7 +548,7 @@
       if(dragMode==='br'){ l.w=orig.w+dx; l.h=orig.h+dy; }
       if(keepRatio){ const r = orig.w/orig.h; l.h = Math.sign(l.h)*Math.abs(l.w / r); }
       l.w=Math.max(12,l.w); l.h=Math.max(12,l.h);
-      if(state.snapping) applySnapping(l); positionLayerDom(l); drawSelection();
+      if(state.snapping) applySnapping(l, e.altKey); positionLayerDom(l); drawSelection();
     } else if(dragMode==='marquee'){
       updateMarquee(e.clientX, e.clientY);
       const sel = layersInMarquee();
@@ -560,23 +560,49 @@
   function onPointerUp(){ dragMode=null; removeMarquee(); clearSmartGuides(); saveAuto(); window.removeEventListener('pointermove', onPointerMove); window.removeEventListener('pointerup', onPointerUp) }
 
   // Snapping helpers
-  function applySnapping(l){
-    const step=10; // grid
-    // snap to grid
-    l.x = snap(l.x, step); l.y = snap(l.y, step);
-    // snap to center lines
-    const cx = l.x + l.w/2; const cy = l.y + l.h/2; const stageCx = state.stage.w/2; const stageCy = state.stage.h/2; const tol=6;
-    if(Math.abs(cx - stageCx) < tol) l.x += (stageCx - cx);
-    if(Math.abs(cy - stageCy) < tol) l.y += (stageCy - cy);
-    // optional: confine to safe area
-    if(state.confineSafe){
-      const left = SAFE_PX, top = SAFE_PX, right = state.stage.w - SAFE_PX, bottom = state.stage.h - SAFE_PX;
-      l.x = clamp(l.x, left, Math.max(left, right - l.w));
-      l.y = clamp(l.y, top,  Math.max(top,  bottom - l.h));
-    } else {
-      l.x = clamp(l.x, -state.stage.w, state.stage.w*2); l.y = clamp(l.y, -state.stage.h, state.stage.h*2);
-    }
+ // Snapping helpers (soporta capas más grandes que el área segura)
+// Tip: mantén ALT mientras arrastras para ignorar límites temporalmente.
+function applySnapping(l, ignoreBounds = false){
+  const step = 10; // grid
+
+  // snap a grilla
+  l.x = snap(l.x, step);
+  l.y = snap(l.y, step);
+
+  // snap a líneas centro del stage
+  const cx = l.x + l.w/2, cy = l.y + l.h/2;
+  const stageCx = state.stage.w/2, stageCy = state.stage.h/2;
+  const tol = 6;
+  if (Math.abs(cx - stageCx) < tol) l.x += (stageCx - cx);
+  if (Math.abs(cy - stageCy) < tol) l.y += (stageCy - cy);
+
+  if (ignoreBounds || !state.confineSafe) {
+    // Rango amplio cuando no confinamos
+    l.x = clamp(l.x, -state.stage.w, state.stage.w*2);
+    l.y = clamp(l.y, -state.stage.h, state.stage.h*2);
+    return;
   }
+
+  // Confinar dentro del área segura, PERO dejando mover imágenes grandes.
+  const left   = SAFE_PX;
+  const top    = SAFE_PX;
+  const right  = state.stage.w - SAFE_PX;
+  const bottom = state.stage.h - SAFE_PX;
+  const safeW  = right - left;
+  const safeH  = bottom - top;
+
+  // Si la capa cabe en el área segura → rango normal
+  // Si NO cabe → permite “deslizarla” de borde a borde por detrás del área segura.
+  const minX = (l.w <= safeW) ? left : (right - l.w);
+  const maxX = (l.w <= safeW) ? (right - l.w) : left;
+
+  const minY = (l.h <= safeH) ? top : (bottom - l.h);
+  const maxY = (l.h <= safeH) ? (bottom - l.h) : top;
+
+  l.x = clamp(l.x, Math.min(minX, maxX), Math.max(minX, maxX));
+  l.y = clamp(l.y, Math.min(minY, maxY), Math.max(minY, maxY));
+}
+
 
   // Actions
   $('#btnNew').onclick=()=>{ if(confirm('¿Vaciar el lienzo?')){ state.layers=[]; state.bgImage=null; renderBackground(); refreshAll(); saveAuto(); }}
